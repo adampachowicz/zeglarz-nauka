@@ -22,6 +22,12 @@
     padding:6px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
   .cat.active{background:var(--band);color:#fff;border-color:var(--band)}
   .cat.soon{opacity:.45;cursor:not-allowed}
+  .cat .badge{display:inline-block;min-width:18px;padding:0 6px;margin-left:4px;border-radius:999px;
+    background:#dbe6f3;color:#12406b;font-size:11px;font-weight:600;line-height:17px;text-align:center;vertical-align:middle}
+  .cat.active .badge{background:rgba(255,255,255,.28);color:#fff}
+  .summary{margin:2px 0 6px;padding:8px 12px;background:#eef4fb;border:1px solid #d3e2f2;border-radius:10px;
+    font-size:13px;color:#12406b}
+  .summary b{font-size:15px}
   .controls{position:sticky;top:0;z-index:5;background:#f4f6f9;padding:10px 0;display:flex;
     gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
   #q{flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px}
@@ -78,6 +84,7 @@
 </header>
 <div class="wrap">
   <div class="cats" id="cats"></div>
+  <div id="summary" class="summary"></div>
   <div class="controls">
     <input id="q" placeholder="Szukaj w pytaniach i odpowiedziach…">
     <button class="btn on" id="modeNauka">📖 Nauka</button>
@@ -818,24 +825,44 @@ let activeCat = "Przepisy";
 let mode = "nauka";       // "nauka" | "test"
 let hideDone = false;     // pula: tylko nieopanowane
 let drawSet = null;       // wylosowany podzbiór numerów (Test) lub null
-let done = {};
+
+// --- trwały zapis postępu: localStorage (działa na hostowanej stronie i po odświeżeniu) ---
+const Store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+};
+const progress = {};   // { kategoria: { numer: true } } — trzymane dla WSZYSTKICH tematów naraz
+CATS.forEach(c=>{ let o={}; try{ const v=Store.get('zj_done_'+c); if(v) o=JSON.parse(v)||{}; }catch(e){} progress[c]=o; });
+try{ hideDone = Store.get('zj_onlyun')==='1'; }catch(e){}
+let done = progress[activeCat];
 
 const catsEl = document.getElementById('cats');
+const catBtns = {};
 CATS.forEach(c=>{
   const b=document.createElement('button');
   b.className='cat'+(c===activeCat?' active':'')+(READY[c]?'':' soon');
-  b.textContent=c+(READY[c]?'':' • wkrótce');
   if(READY[c]) b.onclick=()=>switchCat(c);
-  catsEl.appendChild(b);
+  catsEl.appendChild(b); catBtns[c]=b;
 });
+function countUn(c){ const tot=(DATA[c]||[]).length; const d=progress[c]||{}; let m=0; for(const k in d){ if(d[k]) m++; } return {tot, mastered:m, un:tot-m}; }
+function updateCatLabels(){
+  CATS.forEach(c=>{
+    const b=catBtns[c]; if(!b) return;
+    if(!READY[c]){ b.textContent=c+' • wkrótce'; return; }
+    const {un}=countUn(c);
+    b.innerHTML=esc(c)+' <span class="badge">'+un+'</span>';
+  });
+  let un=0,tot=0; CATS.forEach(c=>{ if(!READY[c])return; const s=countUn(c); un+=s.un; tot+=s.tot; });
+  const g=document.getElementById('summary');
+  if(g) g.innerHTML='🎯 Nieopanowane ogółem: <b>'+un+'</b> / '+tot+'  •  opanowane: '+(tot-un);
+}
 
-async function switchCat(c){
-  activeCat=c; drawSet=null;
-  document.querySelectorAll('.cat').forEach(x=>x.classList.toggle('active', x.textContent.startsWith(c)&&READY[c]&&x.textContent.indexOf('wkrótce')<0));
-  done={}; try{ const r=await window.storage.get('done_'+c); if(r&&r.value) done=JSON.parse(r.value);}catch(e){}
+function switchCat(c){
+  activeCat=c; drawSet=null; done=progress[c];
+  CATS.forEach(x=>{ if(catBtns[x]) catBtns[x].classList.toggle('active', x===c && READY[c]); });
   render();
 }
-async function saveDone(){ try{ await window.storage.set('done_'+activeCat, JSON.stringify(done)); }catch(e){} }
+function saveDone(){ Store.set('zj_done_'+activeCat, JSON.stringify(done)); updateCatLabels(); }
 
 const listEl=document.getElementById('list');
 const countEl=document.getElementById('count');
@@ -905,7 +932,7 @@ function render(){
     listEl.appendChild(card);
   });
   countEl.textContent=stat(shown);
-  function stat(s){ const poolInfo=hideDone?' • pula: '+(rows.length-doneCount):''; return (s!==undefined?s+' / ':'')+rows.length+' pytań • opanowane: '+doneCount+poolInfo; }
+  function stat(s){ const {tot,mastered,un}=countUn(activeCat); return (s!==undefined?s+' widocznych • ':'')+'nieopanowane w tym temacie: '+un+' / '+tot+' (opanowane: '+mastered+')'; }
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
@@ -922,7 +949,7 @@ function setMode(m){
 }
 bNauka.onclick=()=>setMode("nauka");
 bTest.onclick=()=>setMode("test");
-document.getElementById('hideDone').onclick=e=>{ hideDone=!hideDone; e.target.classList.toggle('on',hideDone); drawSet=null; render(); };
+document.getElementById('hideDone').onclick=e=>{ hideDone=!hideDone; e.target.classList.toggle('on',hideDone); Store.set('zj_onlyun', hideDone?'1':'0'); drawSet=null; render(); };
 bDraw.onclick=()=>{
   const pool=(DATA[activeCat]||[]).map(r=>r[0]).filter(n=>!(hideDone&&done[n]));
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
@@ -931,8 +958,9 @@ bDraw.onclick=()=>{
   window.scrollTo({top:0,behavior:'smooth'});
 };
 
-(async function init(){
-  try{ const r = await window.storage.get('done_'+activeCat); if(r&&r.value) done = JSON.parse(r.value); }catch(e){}
+(function init(){
+  if(hideDone) document.getElementById('hideDone').classList.add('on');
+  updateCatLabels();
   render();
 })();
 </script>
