@@ -43,6 +43,16 @@
   .hook{margin:8px 0 0;padding:9px 11px;background:var(--hook-soft);border-left:3px solid var(--hook);
     border-radius:8px;font-size:13.5px;color:#5c3d0a}
   .figure{margin:10px 0 0;text-align:center}
+  .opts{margin:10px 0 0;display:flex;flex-direction:column;gap:7px}
+  .opt{text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14.5px;cursor:pointer;transition:.12s}
+  .opt:hover{border-color:#9db8d6}
+  .opt.correct{background:var(--accent-soft);border-color:var(--accent);color:#0a4a3c;font-weight:600}
+  .opt.wrong{background:#fdecec;border-color:#d9534f;color:#8a2b28}
+  .opt.locked{cursor:default}
+  .opt .tick{float:right}
+  .revealnote{margin:9px 0 0;padding:9px 11px;background:var(--hook-soft);border-left:3px solid var(--hook);border-radius:8px;font-size:13.5px;color:#5c3d0a;display:none}
+  .revealnote.show{display:block}
+  .noopts{margin:10px 0 0;padding:10px 12px;background:#fff6e6;border:1px solid #f0d9a8;border-radius:9px;font-size:13px;color:#8a5a00}
   .figure img{max-width:100%;max-height:260px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:6px}
   .figcap{display:block;font-size:11px;color:var(--muted);margin-top:3px}
   .sources{background:#eef4fb;border:1px solid #d3e2f2;border-radius:12px;padding:11px 13px;margin:6px 0 4px}
@@ -70,14 +80,17 @@
   <div class="cats" id="cats"></div>
   <div class="controls">
     <input id="q" placeholder="Szukaj w pytaniach i odpowiedziach…">
-    <button class="btn" id="testBtn">🙈 Tryb sprawdzania</button>
-    <button class="btn" id="hideDone">Ukryj opanowane</button>
+    <button class="btn on" id="modeNauka">📖 Nauka</button>
+    <button class="btn" id="modeTest">📝 Test</button>
+    <button class="btn" id="hideDone">🎯 Tylko nieopanowane</button>
+    <button class="btn" id="drawBtn" style="display:none">🎲 Wylosuj 20</button>
     <span class="count" id="count"></span>
   </div>
   <div id="list"></div>
 </div>
 <footer>Nauka do egzaminu na żeglarza jachtowego • kolejne kategorie dodawane sukcesywnie</footer>
 
+<script src="zeglarz-data.js"></script>
 <script>
 // ==== DANE ====  [n, pytanie, odpowiedź, hak/dlaczego, rysunek?]
 const CATS = ["Przepisy","Locja","Meteorologia","Ratownictwo","Budowa jachtów","Teoria żeglowania","Eksploatacja i teoria manewrowania"];
@@ -802,8 +815,9 @@ const SOURCES={
 
 // ==== APLIKACJA ====
 let activeCat = "Przepisy";
-let testMode = false;
-let hideDone = false;
+let mode = "nauka";       // "nauka" | "test"
+let hideDone = false;     // pula: tylko nieopanowane
+let drawSet = null;       // wylosowany podzbiór numerów (Test) lub null
 let done = {};
 
 const catsEl = document.getElementById('cats');
@@ -816,7 +830,7 @@ CATS.forEach(c=>{
 });
 
 async function switchCat(c){
-  activeCat=c; testMode=testMode; 
+  activeCat=c; drawSet=null;
   document.querySelectorAll('.cat').forEach(x=>x.classList.toggle('active', x.textContent.startsWith(c)&&READY[c]&&x.textContent.indexOf('wkrótce')<0));
   done={}; try{ const r=await window.storage.get('done_'+c); if(r&&r.value) done=JSON.parse(r.value);}catch(e){}
   render();
@@ -827,6 +841,10 @@ const listEl=document.getElementById('list');
 const countEl=document.getElementById('count');
 const qInput=document.getElementById('q');
 
+function optsFor(n){
+  const arr = (window.OPTS && window.OPTS[activeCat]) ? window.OPTS[activeCat][n-1] : null;
+  return arr && arr.o ? arr : null;
+}
 function render(){
   const term=qInput.value.trim().toLowerCase();
   const rows=(DATA[activeCat]||[]);
@@ -834,37 +852,84 @@ function render(){
   const src=SOURCES[activeCat];
   if(src){ const sp=document.createElement('div'); sp.className='sources';
     sp.innerHTML='<b>📚 Materiały źródłowe</b>'+src.map(s=>'<a href="'+s.u+'" target="_blank" rel="noopener">'+esc(s.t)+'</a>').join(''); listEl.appendChild(sp);}
+  if(mode==="test" && !(window.OPTS && window.OPTS[activeCat])){
+    const w=document.createElement('div'); w.className='noopts';
+    w.innerHTML='📝 Tryb Test wymaga pliku <b>zeglarz-data.js</b> obok index.html (z wariantami odpowiedzi). Wgraj go do repozytorium — do tego czasu działa tryb 📖 Nauka.';
+    listEl.appendChild(w);
+  }
   let shown=0, doneCount=0;
   rows.forEach(r=>{
     const [n,q,a,note,img]=r;
     if(done[n]) doneCount++;
     if(hideDone && done[n]) return;
+    if(drawSet && !drawSet.has(n)) return;
     if(term && !(q.toLowerCase().includes(term)||a.toLowerCase().includes(term))) return;
     shown++;
-    const card=document.createElement('div');
-    card.className='card'+(testMode?' hidden':'')+(done[n]?' done':'');
     const imgUrl = IMG[activeCat] && IMG[activeCat][n];
-    card.innerHTML=
-      '<div class="qhead"><div class="num">'+n+'</div><div class="qtext">'+esc(q)+
+    const card=document.createElement('div');
+    card.className='card'+(done[n]?' done':'');
+    let html='<div class="qhead"><div class="num">'+n+'</div><div class="qtext">'+esc(q)+
       (img&&!imgUrl?'<span class="img">📷 rysunek</span>':'')+'</div></div>'+
-      (imgUrl?'<div class="figure"><img loading="lazy" src="'+imgUrl+'" alt="ilustracja do pytania"><span class="figcap">ilustracja źródłowa — Kliper</span></div>':'')+
-      '<div class="ans"><b>Odpowiedź:</b> '+esc(a)+'</div>'+
-      '<div class="hook">💡 '+esc(note)+'</div>'+
-      '<label class="mark"><input type="checkbox" '+(done[n]?'checked':'')+'> opanowane</label>';
-    card.querySelector('input').onchange=e=>{ done[n]=e.target.checked; if(!done[n])delete done[n]; saveDone(); if(hideDone)render(); else{card.classList.toggle('done',e.target.checked); countEl.textContent=stat();} };
-    if(testMode){
-      card.querySelectorAll('.ans,.hook').forEach(el=>{ el.onclick=()=>el.classList.add('reveal'); });
+      (imgUrl?'<div class="figure"><img loading="lazy" src="'+imgUrl+'" alt="ilustracja do pytania"><span class="figcap">ilustracja źródłowa — Kliper</span></div>':'');
+
+    if(mode==="test"){
+      const opt=optsFor(n);
+      if(opt){
+        html+='<div class="opts">'+opt.o.map((t,i)=>'<button class="opt" data-i="'+i+'">'+esc(t)+'</button>').join('')+'</div>';
+        html+='<div class="revealnote">💡 '+esc(note)+'</div>';
+      } else {
+        html+='<div class="ans"><b>Odpowiedź:</b> '+esc(a)+'</div><div class="hook">💡 '+esc(note)+'</div>';
+      }
+      html+='<label class="mark"><input type="checkbox" '+(done[n]?'checked':'')+'> opanowane</label>';
+      card.innerHTML=html;
+      const opt2=optsFor(n);
+      if(opt2){
+        const correct=opt2.a||[];
+        const btns=card.querySelectorAll('.opt');
+        btns.forEach(b=>{ b.onclick=()=>{
+          if(card.dataset.answered) return; card.dataset.answered="1";
+          const i=+b.dataset.i;
+          btns.forEach(x=>x.classList.add('locked'));
+          correct.forEach(ci=>btns[ci] && btns[ci].classList.add('correct'));
+          if(!correct.includes(i)) b.classList.add('wrong');
+          card.querySelector('.revealnote').classList.add('show');
+        };});
+      }
+    } else {
+      html+='<div class="ans"><b>Odpowiedź:</b> '+esc(a)+'</div>'+
+        '<div class="hook">💡 '+esc(note)+'</div>'+
+        '<label class="mark"><input type="checkbox" '+(done[n]?'checked':'')+'> opanowane</label>';
+      card.innerHTML=html;
     }
+    card.querySelector('.mark input').onchange=e=>{ done[n]=e.target.checked; if(!done[n])delete done[n]; saveDone(); if(hideDone)render(); else{card.classList.toggle('done',e.target.checked); countEl.textContent=stat();} };
     listEl.appendChild(card);
   });
   countEl.textContent=stat(shown);
-  function stat(s){ return (s!==undefined?s+' / ':'')+rows.length+' pytań • opanowane: '+doneCount; }
+  function stat(s){ const poolInfo=hideDone?' • pula: '+(rows.length-doneCount):''; return (s!==undefined?s+' / ':'')+rows.length+' pytań • opanowane: '+doneCount+poolInfo; }
 }
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 qInput.oninput=render;
-document.getElementById('testBtn').onclick=e=>{ testMode=!testMode; e.target.classList.toggle('on',testMode); e.target.textContent=testMode?'👁 Pokaż odpowiedzi':'🙈 Tryb sprawdzania'; render(); };
-document.getElementById('hideDone').onclick=e=>{ hideDone=!hideDone; e.target.classList.toggle('on',hideDone); render(); };
+const bNauka=document.getElementById('modeNauka');
+const bTest=document.getElementById('modeTest');
+const bDraw=document.getElementById('drawBtn');
+function setMode(m){
+  mode=m; drawSet=null;
+  bNauka.classList.toggle('on', m==="nauka");
+  bTest.classList.toggle('on', m==="test");
+  bDraw.style.display = (m==="test") ? "" : "none";
+  render();
+}
+bNauka.onclick=()=>setMode("nauka");
+bTest.onclick=()=>setMode("test");
+document.getElementById('hideDone').onclick=e=>{ hideDone=!hideDone; e.target.classList.toggle('on',hideDone); drawSet=null; render(); };
+bDraw.onclick=()=>{
+  const pool=(DATA[activeCat]||[]).map(r=>r[0]).filter(n=>!(hideDone&&done[n]));
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  drawSet=new Set(pool.slice(0,20));
+  qInput.value=""; render();
+  window.scrollTo({top:0,behavior:'smooth'});
+};
 
 (async function init(){
   try{ const r = await window.storage.get('done_'+activeCat); if(r&&r.value) done = JSON.parse(r.value); }catch(e){}
