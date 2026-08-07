@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Żeglarz jachtowy — nauka do egzaminu</title>
+<style>
+  :root{
+    --bg:#0f1c2e; --card:#ffffff; --ink:#1a2433; --muted:#5b6b7f;
+    --line:#e2e8f0; --accent:#0a6b57; --accent-soft:#e7f4f0;
+    --hook:#b45309; --hook-soft:#fdf3e3; --band:#12406b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#f4f6f9;color:var(--ink);line-height:1.5;}
+  header{background:linear-gradient(135deg,#0f1c2e,#12406b);color:#fff;padding:22px 18px;}
+  header h1{margin:0 0 4px;font-size:20px;letter-spacing:.2px}
+  header p{margin:0;color:#b7c6d9;font-size:13px}
+  .wrap{max-width:900px;margin:0 auto;padding:16px 14px 60px}
+  .cats{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 6px}
+  .cat{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;
+    padding:6px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
+  .cat.active{background:var(--band);color:#fff;border-color:var(--band)}
+  .cat.soon{opacity:.45;cursor:not-allowed}
+  .controls{position:sticky;top:0;z-index:5;background:#f4f6f9;padding:10px 0;display:flex;
+    gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line)}
+  #q{flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:15px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px;font-size:13px;cursor:pointer}
+  .btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .count{font-size:12px;color:var(--muted);margin-left:auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin:12px 0;
+    box-shadow:0 1px 2px rgba(16,32,54,.04)}
+  .card.done{opacity:.55}
+  .qhead{display:flex;gap:10px;align-items:flex-start}
+  .num{flex:0 0 auto;min-width:30px;height:30px;border-radius:8px;background:var(--band);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+  .qtext{font-weight:600;font-size:15.5px}
+  .img{display:inline-block;font-size:11px;color:#8a5a00;background:#fff6e6;border:1px solid #f0d9a8;
+    border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+  .ans{margin:10px 0 0;padding:9px 11px;background:var(--accent-soft);border-left:3px solid var(--accent);
+    border-radius:8px;font-size:14.5px}
+  .ans b{color:var(--accent)}
+  .hook{margin:8px 0 0;padding:9px 11px;background:var(--hook-soft);border-left:3px solid var(--hook);
+    border-radius:8px;font-size:13.5px;color:#5c3d0a}
+  .figure{margin:10px 0 0;text-align:center}
+  .figure img{max-width:100%;max-height:260px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:6px}
+  .figcap{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+  .sources{background:#eef4fb;border:1px solid #d3e2f2;border-radius:12px;padding:11px 13px;margin:6px 0 4px}
+  .sources b{display:block;font-size:13px;margin-bottom:5px;color:var(--band)}
+  .sources a{display:block;font-size:12.5px;color:#12406b;margin:3px 0;text-decoration:none;border-bottom:1px dotted #9db8d6;width:fit-content}
+  .sources a:hover{color:#0a2d4f}
+  .hidden .ans,.hidden .hook{filter:blur(6px);cursor:pointer;user-select:none}
+  .hidden .ans.reveal,.hidden .hook.reveal{filter:none;cursor:auto}
+  .mark{margin-top:10px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+  .mark input{width:16px;height:16px}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:20px}
+  @media print{
+    .controls,.cats,header p,.mark,.btn{display:none}
+    .card{break-inside:avoid;box-shadow:none}
+    .hidden .ans,.hidden .hook{filter:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>⛵ Żeglarz jachtowy — nauka do egzaminu</h1>
+  <p>Pytanie → poprawna odpowiedź → dlaczego i jak zapamiętać. Materiał z trybu nauki (PZŻ).</p>
+</header>
+<div class="wrap">
+  <div class="cats" id="cats"></div>
+  <div class="controls">
+    <input id="q" placeholder="Szukaj w pytaniach i odpowiedziach…">
+    <button class="btn" id="testBtn">🙈 Tryb sprawdzania</button>
+    <button class="btn" id="hideDone">Ukryj opanowane</button>
+    <span class="count" id="count"></span>
+  </div>
+  <div id="list"></div>
+</div>
+<footer>Nauka do egzaminu na żeglarza jachtowego • kolejne kategorie dodawane sukcesywnie</footer>
+
+<script>
+// ==== DANE ====  [n, pytanie, odpowiedź, hak/dlaczego, rysunek?]
+const CATS = ["Przepisy","Locja","Meteorologia","Ratownictwo","Budowa jachtów","Teoria żeglowania","Eksploatacja i teoria manewrowania"];
+const READY = {"Przepisy":true,"Locja":true,"Meteorologia":true,"Ratownictwo":true,"Budowa jachtów":true,"Teoria żeglowania":true,"Eksploatacja i teoria manewrowania":true};
+const DATA = {
+"Przepisy":[
+[1,`Czarna kula wywieszona na jachcie w porze dziennej oznacza:`,`Statek na kotwicy`,`Jedna czarna kula = zawsze statek na kotwicy. Nocą odpowiada jej białe światło widoczne dookoła.`,1],
+[2,`Jacht idzie pod żaglami w morzu, nadeszła mgła. Jaki sygnał należy nadawać?`,`Jeden dźwięk długi i dwa krótkie, co 2 minuty`,`Żaglowy (i każdy „nietypowy”: łowiący, NUC, RAM) daje we mgle: 1 długi + 2 krótkie co 2 min. Sam statek mechaniczny w drodze dawałby 1 długi.`,0],
+[3,`Jak powinny się zachować dwa statki mechaniczne na kursie naprzeciw siebie?`,`Minąć się lewymi burtami`,`Zasada „zawsze w prawo”: każdy odbija w prawo, więc rozchodzą się lewymi burtami.`,0],
+[4,`Śródlądzie. Małemu statkowi płynącemu pod żaglami ustępuje:`,`Mały statek o napędzie mechanicznym`,`Wśród małych jednostek żagle mają pierwszeństwo nad silnikiem — to mechaniczny schodzi z drogi.`,0],
+[5,`Jeden długi dźwięk nadany na drodze śródlądowej oznacza:`,`Uwaga`,`Długie „UUU” = Uwaga. Krótkie dźwięki dotyczą skrętów.`,0],
+[6,`Czy do jezior i wód przybrzeżnych można wyrzucać śmieci?`,`Nie wolno wyrzucać żadnych`,`Zero za burtę — żadnych odpadów do wody.`,0],
+[7,`Dwa żaglowe na tym samym halsie, w kryciu — kto ma pierwszeństwo?`,`Zawietrzny`,`W kryciu (overlap) na tym samym halsie wygrywa zawietrzny; nawietrzny ustępuje, bo ma miejsce, żeby zejść.`,0],
+[8,`Czy WC na jachcie można używać w portach i podczas żeglugi?`,`Tak, jeśli jest połączone ze zbiornikiem (waste) lub jest chemiczne/zamknięte`,`Nigdy „prosto za burtę”. Dozwolone tylko z zamkniętym obiegiem/zbiornikiem.`,0],
+[9,`Podejście do Gdańska — statek podniósł kule i romby. Jak go wyminąć?`,`Od strony wystawionych rombów`,`Romb = strona bezpieczna do mijania; kula = strona zajęta/płycizna. (pytanie z rysunkiem)`,1],
+[10,`Cisza, awaria silnika, spory ruch — jaki sygnał podnosi jacht?`,`Dwie czarne kule`,`Dwie kule = „nie odpowiadam za sterowność” (statek bez możliwości manewru). Jedna kula to tylko kotwica.`,0],
+[11,`Morze (poza torem): żaglowy krzyżuje kurs z małym pasażerskim mechanicznym. Manewr?`,`Utrzymać kurs i prędkość`,`Na morzu żagle > mechaniczny, więc to żaglowy trzyma kurs, a mechaniczny ustępuje.`,0],
+[12,`A na lewym halsie, B na prawym z czarnym stożkiem (na silniku). Kto ustępuje?`,`Jacht B`,`Stożek = statek na silniku = traktowany jak mechaniczny, więc ustępuje żaglowemu A.`,0],
+[13,`Bezpieczny przedział Beauforta dla mieczowego jachtu turystycznego:`,`0°–6°B`,`Mieczówka turystyczna: bezpiecznie do 6°B.`,0],
+[14,`Krzyżowanie kursu z małą jednostką niosącą sygnał (rysunek). Jak postąpić?`,`Ominąć go z daleka`,`Sygnał = statek zajęty/uprzywilejowany — trzymaj się z dala. (rysunek)`,1],
+[15,`Jaki kolor ma światło kotwiczne?`,`Białe`,`Kotwiczne = białe, widoczne dookoła widnokręgu.`,0],
+[16,`Żeglarz jachtowy jest uprawniony m.in. do:`,`Prowadzenia po morzu jachtu do 12 m, do 2 Mm od brzegu, w porze dziennej`,`Zapamiętaj trójkę: 12 m / 2 Mm / dzień.`,0],
+[17,`Przed wejściem na obcy jacht należy:`,`Zapytać o pozwolenie i nie przeszkadzać w czasie posiłku`,`Kultura żeglarska: najpierw pytasz o zgodę.`,0],
+[18,`Gdzie nosi się banderę na dwumasztowym o ożaglowaniu gaflowym?`,`Pod pikiem gafla tylnego żagla`,`Jest gafel → bandera pod pikiem gafla (nie na flagsztoku).`,0],
+[19,`Mgła, morze — dwa długie dźwięki przed dziobem. Jak postąpić?`,`Zmniejszyć szybkość, zmienić kurs w prawo, być w gotowości`,`We mgle: zwolnij i odbij w prawo, bądź gotów do manewru.`,0],
+[20,`Jacht na żaglach i na silniku w dzień powinien nosić:`,`Czarny stożek wierzchołkiem w dół`,`Stożek „do dołu” = motorżaglowiec.`,0],
+[21,`Prędkość 1 węzeł to:`,`1 mila morska na godzinę`,`Węzeł = Mm/h.`,0],
+[22,`Co oznacza jeden krótki dźwięk?`,`Skręcam w prawo`,`1 krótki = raz w prawo.`,0],
+[23,`Ten sam wiatr z tej samej burty — nawietrzny powinien:`,`Ustąpić pierwszeństwa`,`Nawietrzny zawsze ustępuje zawietrznemu. (rysunek)`,1],
+[24,`15-latek z patentem żeglarza, śródlądzie — dozwolona powierzchnia żagla:`,`Dowolna`,`Po zdobyciu patentu (od 14 r.ż.) ograniczenia powierzchni znikają.`,0],
+[25,`Mały żaglowy prawym halsem krzyżuje kurs z małym żaglowym lewym halsem. Powinien:`,`Zachować kurs i szybkość`,`Prawy hals ma pierwszeństwo — trzyma kurs.`,0],
+[26,`Trzy krótkie, trzy długie, trzy krótkie sygnały oznaczają:`,`Jeden z sygnałów wzywania pomocy`,`…---… = SOS.`,0],
+[27,`Statek podniósł sygnał jak na rysunku. Co oznacza?`,`Mam nurka pod wodą — trzymajcie się z daleka, idźcie wolno`,`Flaga „A” (Alfa) = nurek pod wodą. (rysunek)`,1],
+[28,`Morze: żaglowy wyprzedzający inny żaglowy:`,`Ustępuje wyprzedzanemu, omijając go w bezpiecznej odległości`,`Wyprzedzający ZAWSZE ustępuje — bez względu na hals i typ.`,0],
+[29,`Żaglowy 8 m na śródlądziu powinien ustąpić:`,`Statkowi pasażerskiemu o napędzie mechanicznym`,`Duży pasażerski > mały żaglowy.`,0],
+[30,`Gdy dwa statki mechaniczne się spotykają, pierwszeństwo ma:`,`Statek zarobkowy`,`Zawodowy/zarobkowy > rekreacyjny.`,0],
+[31,`(jak 11) Morze, poza torem: żaglowy vs mały pasażerski mechaniczny. Manewr?`,`Utrzymać kurs i prędkość`,`Na morzu żaglowy trzyma kurs, mechaniczny ustępuje.`,0],
+[32,`Dwa statki się spotykają — kto ma pierwszeństwo (śródlądzie)?`,`Statek idący w dół drogi wodnej`,`Idący z prądem (w dół) trudniej hamuje → ma pierwszeństwo.`,0],
+[33,`Wchodząc do portu obcego państwa należy:`,`Podnieść banderę tego państwa pod prawym salingiem`,`Bandera gościa → prawy saling.`,0],
+[34,`Śródlądzie: pasażerski <20 m ze znakiem (rysunek) uważa się za:`,`Statek nie będący małym statkiem`,`Znak = „traktuj mnie jak duży statek”. (rysunek)`,1],
+[35,`Statek znajduje się „w drodze” dopóki:`,`Nie stoi na mieliźnie`,`W drodze = nie na kotwicy, nie na mieliźnie, nie przycumowany.`,0],
+[36,`Etykieta o noszeniu odbijaczy za burtą podczas żeglugi:`,`Neguje to — odbijacze wykłada się tuż przed cumowaniem`,`Fendery tylko przy cumowaniu, nie w drodze.`,0],
+[37,`Sygnał 1 krótki+1 długi+2 krótkie oraz flaga (rysunek). Znaczenie?`,`Zatrzymajcie natychmiast swój statek`,`Nietypowy „zbitek” dźwięków = pilne żądanie zatrzymania. (rysunek)`,1],
+[38,`Do czego upoważnia stopień żeglarza jachtowego?`,`Śródlądzie powyżej 7,5 m; morze do 12 m, w strefie 2 Mm od brzegu, w dzień`,`7,5 m (śródlądzie) / 12 m + 2 Mm + dzień (morze).`,0],
+[39,`Śródlądzie: wyprzedzając żaglowy, wyprzedzaj z zasady:`,`Po jego stronie nawietrznej, w bezpiecznej odległości`,`Na śródlądziu wyprzedza się od nawietrznej.`,0],
+[40,`(jak 15) Jaki kolor ma światło kotwiczne?`,`Białe`,`Kotwiczne = białe dookoła.`,0],
+[41,`Żaglowy na otwartym morzu ustępuje:`,`Statkowi o ograniczonej zdolności manewrowej`,`Drabinka pierwszeństwa: NUC > RAM > łowiący > żaglowy > mechaniczny.`,0],
+[42,`Żaglowy o długości poniżej 7 m jest uważany za:`,`Mały statek żaglowy`,`<7 m = „mały statek żaglowy”.`,0],
+[43,`Dwa żaglowe na różnych halsach — kto ma pierwszeństwo?`,`Jacht płynący prawym halsem`,`Prawy hals rządzi.`,0],
+[44,`Co NIE JEST sygnałem wzywania pomocy na śródlądziu?`,`Żółty romb widoczny ze wszystkich stron`,`Żółty romb = statek pasażerski z pierwszeństwem, nie SOS.`,0],
+[45,`Jacht na żaglach i na silniku traktowany jest jako:`,`Statek o napędzie mechanicznym`,`Silnik pracuje → jesteś „mechanicznym”, choć masz żagle.`,0],
+[46,`Morze: żaglowy wyprzedzany przez inny żaglowy:`,`Ma prawo drogi — utrzymuje kurs i prędkość`,`Wyprzedzany trzyma kurs; ustępuje ten, kto wyprzedza.`,0],
+[47,`Dwa statki tego samego typu się spotykają — pierwszeństwo:`,`Statek idący w dół drogi wodnej`,`Z prądem (w dół) = pierwszeństwo.`,0],
+[48,`Dwa żaglowe różnymi halsami na kursach kolizyjnych — ustępuje:`,`Idący lewym halsem`,`Lewy hals ustępuje prawemu.`,0],
+[49,`(jak 34) Pasażerski <20 m ze znakiem — uważany za:`,`Statek nie będący małym statkiem`,`Znak = traktuj jak duży. (rysunek)`,1],
+[50,`Która grupa znaków to SOS?`,`• • • – – – • • •`,`Trzy kropki, trzy kreski, trzy kropki.`,0],
+[51,`Zauważono dużą plamę oleju na wodzie. Co zrobić?`,`Powiadomić właściwe służby (śródlądzie: straż pożarna; morze: kapitanat/służba ruchu)`,`Nie sprzątaj sam detergentem — zgłoś.`,0],
+[52,`Śródlądzie: zielone nad białym na statku oznacza:`,`Prom na uwięzi w ruchu`,`Prom linowy = zielone nad białym.`,0],
+[53,`Prowadzący żaglowy 8 m na śródlądziu powinien posiadać:`,`Patent co najmniej żeglarza jachtowego`,`Powyżej 7,5 m potrzebny patent.`,0],
+[54,`Zakotwiczony statek: z jednej burty pasy biało-zielone, z drugiej czerwono-białe. Mijasz od strony:`,`Tablicy zielono-białej`,`Zielono-biały = „tędy wolno przejść”; czerwono-biały = nie mijać z tej strony. (rysunek)`,1],
+[55,`Zatoka Gdańska: statek podniósł sygnał (rysunek). Co zrobić?`,`Minąć go z dowolnej strony w bezpiecznej odległości`,`(rysunek) — bezpieczny dystans z dowolnej strony.`,1],
+[56,`Śródlądzie: sygnał na burcie stojącego statku (rysunek). Z której strony mijać?`,`Tylko od strony flagi czerwono-białej`,`Tu strona przejścia jest oznaczona flagą czerwono-białą. (rysunek)`,1],
+[57,`Zasady o trzymaniu rąk i nóg poza burtą:`,`Zdecydowanie zabraniają`,`Kończyny w łódce — zawsze.`,0],
+[58,`Kto oprócz policji może nas kontrolować na śródlądziu?`,`Inspektorzy Żeglugi Śródlądowej`,`Policja + IŻŚ.`,0],
+[59,`Jacht na silniku, naprzeciw żaglowy z sygnałem (rysunek). Jak postąpić?`,`Zmienić kurs w prawo`,`Mechaniczny ustępuje żaglowemu — unik w prawo. (rysunek)`,1],
+[60,`Dwa żaglowe na tym samym halsie — pierwszeństwo ma:`,`Jacht swobodny z przodu`,`Bez krycia: prowadzący (z przodu) ma pierwszeństwo. W kryciu decyduje zawietrzny (patrz 7).`,0],
+[61,`Flaga oraz kula nad nią lub pod nią oznacza:`,`Wzywanie pomocy`,`Flaga + kula = wizualny sygnał SOS.`,0],
+[62,`Śródlądzie: mały żaglowy powinien ustąpić:`,`Statkowi pasażerskiemu o napędzie mechanicznym`,`Pasażerski > mały.`,0],
+[63,`Do jakiego znaku żeglugowego może zacumować żaglowy?`,`Zabrania się cumowania do znaków żeglugowych`,`Znaki to nie polery — nie cumujemy.`,0],
+[64,`Dwa żaglowe, ten sam wiatr, kursy kolizyjne — nawietrzny powinien:`,`Ustąpić pierwszeństwa`,`Nawietrzny ustępuje. (rysunek)`,1],
+[65,`Morze: żaglowy prawym halsem ustępuje:`,`Statkowi rybackiemu zajętemu połowem`,`Łowiący > żaglowy w drabince pierwszeństwa.`,0],
+[66,`Dla uniknięcia bezpośredniego zderzenia prowadzący jacht:`,`Może odstąpić od przestrzegania przepisów żeglugowych`,`Bezpieczeństwo ponad literą przepisu.`,0],
+[67,`Śródlądzie: pasażerski nadał serię podwójnych krótkich dźwięków. Znaczy:`,`Człowiek za burtą`,`Podwójne krótkie = MOB (człowiek za burtą).`,0],
+[68,`Pasażerski wychodzi z kanału na wprost jachtu i dał dwa krótkie. Jacht powinien:`,`Kontynuować swój kurs`,`Dwa krótkie = on skręca w lewo (ominie cię) — trzymasz kurs.`,0],
+[69,`O jakiej porze podnosi się banderę na jachcie w porcie?`,`O godzinie 08:00`,`Bandera w górę o 8:00 rano.`,0],
+[70,`Jak wygląda duża gala flagowa?`,`Flagi kodu od dziobu przez topy masztów aż do rufy`,`„Od dziobu do rufy przez maszty” = wielkie święto.`,0],
+[71,`Co oznaczają dwa krótkie dźwięki?`,`Skręcam w lewo`,`2 krótkie = lewo.`,0],
+[72,`Która jednostka ma pierwszeństwo przed pozostałymi?`,`Jacht pod żaglami`,`Spośród: żaglowy / mechaniczny / wiosłowa — żaglowy wygrywa.`,0],
+[73,`W dzień statek zatacza kręgi flagą. To oznacza:`,`Statek w niebezpieczeństwie wzywa pomocy`,`Machanie flagą wokół = „ratunku”.`,0],
+[74,`Które odpady są najbardziej szkodliwe dla środowiska?`,`Odpady z tworzyw sztucznych`,`Plastik = największe zło dla wód.`,0],
+[75,`Morze: żaglowy vs mechaniczny z sygnałem (rysunek). Jak postąpić?`,`Ustąpić temu statkowi, mijając go w bezpiecznej odległości`,`Sygnał = statek uprzywilejowany — ustępujesz mimo żagli. (rysunek)`,1],
+[76,`Optymalna długość liny kotwicznej to:`,`3–5 głębokości w miejscu kotwiczenia`,`Reguła 3–5 × głębokość.`,0],
+[77,`Jacht na silniku z opuszczonymi żaglami — banderę nosimy:`,`Na flagsztoku na rufie`,`Bez żagli → bandera na rufie (flagsztok).`,0],
+[78,`Jednomasztowy o ożaglowaniu trójkątnym — bandera:`,`Na flagsztoku na rufie`,`Slup bermudzki → rufa.`,0],
+[79,`Cztery krótkie dźwięki na śródlądziu oznaczają:`,`Nie mogę manewrować`,`4 krótkie = „nie manewruję”.`,0],
+[80,`(jak 63) Cumowanie do znaku żeglugowego:`,`Zabrania się cumowania do znaków żeglugowych`,`Nie cumujemy do znaków.`,0],
+[81,`Od jakiego wieku można uzyskać stopień żeglarza jachtowego?`,`14 lat`,`Patent od 14 r.ż.`,0],
+[82,`Schodząc z jachtu zewnętrznego (cumowanie burta w burtę) należy:`,`Przechodzić cicho przez jego część dziobową`,`Przez dziób sąsiada, nie przez jego kokpit.`,0],
+[83,`Prowadzący jacht jest zobowiązany udzielić pomocy:`,`Gdy może zapewnić bezpieczeństwo jachtu i własnej załogi`,`Pomagasz, ale nie kosztem bezpieczeństwa swojej załogi.`,0],
+[84,`W jaki sposób cumujemy w śluzie?`,`Na biegowo`,`W śluzie na biegowo — lina wraca do łódki, łatwo popuszczać przy zmianie poziomu.`,0],
+[85,`Slup fordewindem ma grota po prawej burcie. Płynie halsem:`,`Lewym`,`Grot po prawej ⇒ wiatr z lewej ⇒ lewy hals.`,0],
+[86,`Za stan techniczny i bezpieczeństwo na jachcie odpowiada:`,`Kierownik statku (kapitan)`,`Kapitan odpowiada za wszystko.`,0],
+[87,`Wieczór, śródlądzie, duży statek (rysunek). Co to i dokąd płynie?`,`Zestaw holowniczy ≥200 m — w lewo`,`Rozpoznanie po układzie świateł. (rysunek)`,1],
+[88,`Czarny stożek wierzchołkiem w dół oznacza:`,`Statek płynący jednocześnie na żaglach i na silniku`,`Stożek „do dołu” = motorżaglowiec (jak 20).`,0],
+[89,`Światło rufowe ma kąt świecenia:`,`135 stopni`,`112,5 + 112,5 (burtowe) + 135 (rufowe) = 360°.`,0],
+[90,`Żeglarz z pomocniczym napędem mechanicznym — moc silnika:`,`Bez ograniczenia mocy`,`Patent żeglarza = dowolny silnik pomocniczy.`,0],
+[91,`Warunek dopuszczenia do egzaminu na żeglarza:`,`Ukończenie 14 lat`,`14 lat.`,0],
+[92,`Seria bardzo krótkich dźwięków (>5) na śródlądziu oznacza:`,`Niebezpieczeństwo zderzenia`,`Dużo krótkich „tri-tri-tri” = „uwaga, zderzenie!”.`,0],
+[93,`Nocą mały statek mechaniczny najczęściej nosi światła:`,`Masztowe, burtowe i rufowe`,`Pełen komplet jak większy statek.`,0],
+[94,`Prawa burta jachtu śródlądowego oznaczona jest światłem koloru:`,`Zielonego`,`Prawa (sterburta) = zielone. Lewa = czerwone.`,0],
+[95,`Ten sam wiatr z tej samej burty — nawietrzny powinien:`,`Ustąpić z drogi`,`Nawietrzny ustępuje (powtórka reguły).`,0],
+[96,`Klarowanie jachtu (spłukanie pokładu z piasku/błota) jest:`,`Zapewnieniem bezpieczeństwa i kultywowaniem tradycji`,`Klarujesz = BHP i tradycja żeglarska.`,0],
+[97,`Dwa mechaniczne na wprost — aby uniknąć zderzenia:`,`Skręcić każdy w swoją prawą stronę`,`Zawsze w prawo.`,0],
+[98,`Nieczystości i odpadki podczas postoju w porcie odprowadzamy:`,`Do zbiorników, które opróżniamy na lądzie`,`Nic do basenu portowego.`,0],
+[99,`Zgodnie z etykietą po jachcie poruszamy się:`,`W miękkim obuwiu`,`Miękkie podeszwy — nie niszczą pokładu.`,0],
+[100,`(jak 79) Cztery krótkie dźwięki na śródlądziu oznaczają:`,`Nie mogę manewrować`,`4 krótkie = „nie manewruję”.`,0],
+[101,`Śródlądzie: statek (rysunek). Co to i która burta widoczna?`,`Statek śródlądowy o długości 110 m i więcej — lewa burta`,`Rozpoznanie po światłach. (rysunek)`,1],
+[102,`W dzień prom na uwięzi oznakowany jest:`,`Zieloną kulą`,`Prom na uwięzi = zielona kula.`,0],
+[103,`Bez patentu na śródlądziu mogę pływać:`,`Jachtem do długości 7,5 m`,`Do 7,5 m bez patentu.`,0],
+[104,`„Statek żaglowy” wg rozporządzenia to statek poruszający się:`,`Wyłącznie za pomocą żagli`,`Włączasz silnik → przestajesz być „żaglowym”.`,0],
+[105,`Lokalne przepisy żeglugowe:`,`Dotyczą każdego prowadzącego jacht, w dzień i w nocy`,`Obowiązują wszystkich, o każdej porze.`,0],
+[106,`Żółty romb (dwa stożki podstawami) na statku — to:`,`Statek pasażerski`,`Żółty romb = pasażerski z pierwszeństwem.`,0],
+[107,`Nocą jedno białe światło dookoła widnokręgu oznacza:`,`Statek śródlądowy stojący na kotwicy`,`Białe dookoła = kotwica (jak 15).`,0],
+[108,`Żaglowy prawym halsem ustępuje:`,`Statkowi o napędzie mechanicznym, którego wyprzedza`,`Nawet na prawym halsie: jeśli wyprzedzasz — ustępujesz.`,0],
+[109,`Jakiego koloru światło na rufie ma statek holujący?`,`Żółte`,`Holujesz = dodatkowe żółte światło na rufie (nad białym rufowym).`,0],
+[110,`„Statek” w rozumieniu przepisów śródlądowych to:`,`Statek żeglugi śródlądowej, w tym mały statek i prom, urządzenia pływające oraz statek morski`,`„Statek” = niemal wszystko, co pływa.`,0],
+[111,`Czy przy zmywaniu naczyń na jachcie używać detergentów?`,`Jak najmniej, bo są szkodliwe dla środowiska`,`Mniej chemii do wody.`,0],
+[112,`W dzień na śródlądziu statek, który utracił manewrowość, pokazuje:`,`Czerwoną flagę poruszającą się wahadłowo`,`Machanie czerwoną flagą = „nie panuję nad sterowaniem”.`,0],
+[113,`Noc: żaglowy na silniku spotyka statek (rysunek). Co to i która burta?`,`Prom przemieszczający się swobodnie — prawa burta`,`Rozpoznanie po światłach. (rysunek)`,1],
+[114,`Śródlądzie: pasażerski i żaglowy na kursach kolizyjnych —`,`Jacht żaglowy ustępuje z drogi statkowi`,`Na śródlądziu duży pasażerski > żaglowy.`,0],
+[115,`W dzień statki z pierwszeństwem przejścia noszą dodatkowo:`,`Czerwony trójkątny proporzec na dziobie`,`Czerwony proporzec na dziobie = „przepuść mnie”.`,0],
+[116,`Kto jest odpowiedzialny za przestrzeganie przepisów żeglugowych?`,`Prowadzący jacht (sternik/kapitan)`,`Odpowiada prowadzący — kapitan.`,0],
+[117,`Żeglarz jachtowy na wodach śródlądowych może prowadzić jachty:`,`Bez ograniczenia powierzchni ożaglowania i długości kadłuba`,`Na śródlądziu — pełne uprawnienia.`,0],
+[118,`Pora dzienna wg przepisów to okres:`,`Od wschodu do zachodu słońca`,`Słońce: wschód → zachód.`,0],
+[119,`Jakim światłem oznakowane są statki z materiałami niebezpiecznymi?`,`Niebieskim`,`Niebieskie światło = niebezpieczny ładunek.`,0]
+],
+"Locja":[
+[1,`Na kanale znaki jak na rysunku. Co oznaczają?`,`Dozwolony postój w stronę wskazaną białym trójkątem — punkt tankowania wody pitnej`,`Biały trójkąt wskazuje kierunek dozwolonego postoju.`,1],
+[2,`Jacht 8 m dł., maszt 14 m wpływa do kanału. Znaki jak na rysunku. Co zrobić?`,`Położyć maszt i płynąć dalej`,`Znak ograniczenia wysokości → kładziesz maszt i płyniesz.`,1],
+[3,`Nabieżnik to:`,`Para staw (lub innych stałych obiektów) wyznaczająca kierunek`,`Dwie stawy w jednej linii = trzymaj ten kurs.`,0],
+[4,`Płynąc kanałem — znak jak na rysunku. Co oznacza?`,`Nakaz nadania sygnału dźwiękowego`,`Znak „z trąbką” = zatrąb.`,1],
+[5,`Jakim znakiem oznaczony jest slip (pochylnia) do wyciągania jachtów?`,`Znak 1`,`Rozpoznanie z rysunku — slip = pochylnia.`,1],
+[6,`Znaki jak na rysunku oznaczają:`,`Przebieg szlaku wzdłuż lewego brzegu`,`Znaki brzegowe „prowadzą” szlak lewym brzegiem.`,1],
+[7,`Znak na wejściu do kanału (rysunek). Co oznacza?`,`Zakaz przejścia`,`Czerwony znak zakazu = nie wpływaj.`,1],
+[8,`Na mapie morskiej oznaczenia jak na rysunku. Co oznaczają?`,`Głębokości 2,5 m i 3,4 m`,`Liczby na mapie morskiej = głębokości.`,1],
+[9,`Ostroga to:`,`Budowla wodna zabezpieczająca brzeg przed wypłukiwaniem`,`Ostroga sterczy w bok rzeki i chroni brzeg — omijaj ją.`,0],
+[10,`Znak na kanale (rysunek). Jak postępować?`,`Obserwować, czy nie przepływa prom, i ewentualnie ustąpić`,`Znak promu = uważaj na prom.`,1],
+[11,`Pisa pod prąd — znak jak na rysunku. Jak go minąć?`,`Lewą burtą`,`Rozpoznanie ze strony znaku na rysunku.`,1],
+[12,`Budowla pozwalająca przejść między akwenami o różnym poziomie wody to:`,`Śluza komorowa`,`Śluza = „winda dla łódek”.`,0],
+[13,`Znak z liczbą na trójkącie (rysunek). Co oznacza liczba?`,`Długość odcinka do cumowania w metrach`,`Liczba = ile metrów nabrzeża do cumowania.`,1],
+[14,`Rzeka z prądem — znak na kursie (rysunek). Znaczenie?`,`Przeszkoda na szlaku, można minąć z obu stron`,`Rozpoznanie z rysunku — przeszkoda, obie strony wolne.`,1],
+[15,`Znak czarno-żółto-czarny, dwa stożki podstawami do siebie oznacza:`,`Miejsce niebezpieczne na zachód od znaku (kardynalny wschodni)`,`E („Egg”): stożki podstawami do siebie, cz-ż-cz → mijasz od wschodu, niebezpieczeństwo na zachód.`,1],
+[16,`Jakim znakiem oznaczony jest slip do wyciągania jachtów?`,`Znak 1`,`Jak pytanie 5 — slip = pochylnia.`,1],
+[17,`Gdzie są informacje o kierunkach oznakowania nawigacyjnego na śródlądziu?`,`W załączniku nr 9 do przepisów żeglugowych (Rozp. MI z 28.04.2003)`,`Kierunki oznakowania = załącznik nr 9.`,0],
+[18,`Znak zezwalający na wejście do śluzy to:`,`Jedno zielone światło`,`Zielone = wpływaj (jak na drodze).`,0],
+[19,`Przed mostem zwodzonym czerwone światła ustawione poziomo oznaczają:`,`Zakaz przejścia`,`Czerwone = stój, nie przepływaj.`,0],
+[20,`Co oznacza ten znak? (rysunek)`,`Zakaz żeglugi pod żaglami`,`Przekreślony żagiel = nie na żaglach.`,1],
+[21,`Znak na brzegu jeziora (rysunek). Co oznacza?`,`Wejście do kanału po lewej stronie znaku`,`Rozpoznanie z rysunku — wejście po lewej.`,1],
+[22,`Most zwodzony — sygnał jak na rysunku. Jak się zachować?`,`Nie przepływać, ale przygotować się do przejścia`,`Czerwone + zielone razem = zaraz otworzą.`,1],
+[23,`Ostroga jest budowlą:`,`Usytuowaną poprzecznie do przepływu rzeki`,`Ostroga = poprzeczna do nurtu.`,0],
+[24,`Co oznacza ten znak i jak się zachować? (rysunek)`,`Prom na uwięzi — mijać za rufą, nie za blisko`,`Prom linowy → przechodzisz za jego rufą.`,1],
+[25,`Znak blisko prawego brzegu (rysunek). Znaczenie?`,`Miejsce niebezpieczne przy prawym brzegu — ominąć w bezpiecznej odległości`,`Rozpoznanie z rysunku — trzymaj dystans.`,1],
+[26,`Znak przy moście na kanale (rysunek). Co oznacza?`,`Wysokość prześwitu nad wodą 7,5 m`,`Liczba w kwadracie = wysokość prześwitu.`,1],
+[27,`Znaki jak na rysunku oznaczają:`,`Przebieg szlaku wzdłuż prawego brzegu`,`Analogicznie do 6, ale prawy brzeg.`,1],
+[28,`Znak na brzegu jeziora (rysunek). Co oznacza?`,`Wejście do kanału po prawej stronie znaku`,`Rozpoznanie z rysunku — wejście po prawej.`,1],
+[29,`Wchodząc do Jastarni kursem na północ, zieloną pławę zostawiamy:`,`Po prawej burcie`,`Wchodząc do portu (region A): zielone po prawej, czerwone po lewej.`,0],
+[30,`Rzeka wzdłuż lewego brzegu — znak (rysunek). Co robić?`,`Spodziewać się przejścia szlaku na prawy brzeg, zmienić kurs`,`Znak przejścia = szlak zmienia brzeg.`,1],
+[31,`Znak na brzegu (rysunek). Jak się zachować?`,`Zmniejszyć szybkość, aby nie wytwarzać fali`,`Znak „fala” = zwolnij.`,1],
+[32,`Dwie tyki ze znakami (rysunek). Co oznaczają?`,`Zalecone przejście pomiędzy znakami (między zielonymi trójkątami)`,`Płyń środkiem — pomiędzy znakami.`,1],
+[33,`Wchodząc do śluzy najważniejsze jest przygotowanie:`,`Dwóch długich cum`,`Śluza = 2 długie cumy (poziom wody się zmienia).`,0],
+[34,`Maszt 8 m, tablice przy wejściu do kanału (rysunek). Jak postąpić?`,`Można przejść po położeniu masztu`,`Ograniczenie wysokości → połóż maszt.`,1],
+[35,`Znak przy wyjściu z kanału (rysunek). Co oznacza?`,`Zakaz żeglugi na silniku`,`Przekreślona śruba = bez silnika.`,1],
+[36,`Rzeka wzdłuż prawego brzegu — znak (rysunek). Co robić?`,`Spodziewać się przejścia szlaku na lewy brzeg, zmienić kurs`,`Jak 30 — szlak zmienia brzeg.`,1],
+[37,`Znak na kursie (rysunek). Jak go minąć?`,`W dowolny sposób, prawą lub lewą burtą`,`Rozpoznanie z rysunku — obie strony wolne.`,1],
+[38,`W systemie kardynalnym pławy ustawia się względem niebezpieczeństwa:`,`Jedną lub więcej pław odpowiednio na N, S, W lub E od niebezpieczeństwa`,`Kardynalne = strony świata wokół przeszkody.`,0],
+[39,`Tama spiętrzająca wodę, nie zawsze przepuszczająca jednostki, to:`,`Jaz`,`Jaz = próg/tama na rzece.`,0],
+[40,`Wisła Toruń→Warszawa, pława w kształcie walca (kolor niejasny). Jak minąć?`,`Mijam ją lewą burtą`,`Walec = prawa strona szlaku; ale płyniesz pod prąd (przeciw kierunkowi szlaku), więc masz go po lewej.`,0],
+[41,`Boje przy brzegu (rysunek). Co oznaczają?`,`Akwen zamknięty — nie wpływać`,`Rozpoznanie z rysunku — zakaz wpływania.`,1],
+[42,`Kurs na północ — pława jak na rysunku. Co oznacza?`,`Południową stronę niebezpieczeństwa — minąć bezpiecznie`,`Kardynalna S: żółty nad czarnym, stożki w dół.`,1],
+[43,`Minimum pomocy nawigacyjnych na Zatoce Gdańskiej to:`,`Mapa, locja akwenu i kompas`,`Zestaw: mapa + locja + kompas.`,0],
+[44,`Nabieżnik Stepnica (rysunek). Jak zmienić kurs, by wejść w linię?`,`W lewo`,`Wejść w linię naprowadzającą — z rysunku w lewo.`,1],
+[45,`Co oznacza pokazana tablica? (rysunek)`,`Dozwolone pływanie na silniku`,`Rozpoznanie z rysunku — silnik dozwolony.`,1],
+[46,`Co oznacza znak na wodach śródlądowych? (rysunek)`,`Znaki pływające lewej granicy szlaku żeglownego`,`Zielone znaki pływające = lewa granica szlaku.`,1],
+[47,`Znak przy wejściu do portu (rysunek). Co oznacza?`,`Zakaz ruchu statków używanych wyłącznie do sportu lub rekreacji`,`Rozpoznanie z rysunku — zakaz dla jednostek sportowych.`,1],
+[48,`Płynąc w górę rzeki (pod prąd) prawą burtą mijamy:`,`Pławy/tyki zielone ze znakiem szczytowym w kształcie stożka`,`Pod prąd wszystko na odwrót: zielone stożki po prawej.`,0],
+[49,`Boczna odnoga, tablica (rysunek). Można wpływać?`,`Tak — oznacza zezwolenie przejścia`,`Rozpoznanie z rysunku — przejście dozwolone.`,1],
+[50,`Pisa pod prąd — tyka na nurcie (rysunek). Jak ominąć?`,`Prawą burtą`,`Rozpoznanie z rysunku.`,1],
+[51,`Pława po wyjściu z przesmyku (rysunek). Co oznacza?`,`Rozwidlenie szlaku żeglownego`,`Poziome pasy = rozwidlenie szlaku.`,1],
+[52,`Żółty znak na środku przęsła mostu (rysunek). Co oznacza?`,`Zalecenie przejścia w obydwu kierunkach`,`Żółty znak na środku przęsła = można w obie strony.`,1],
+[53,`Znak na odnodze kanału (rysunek). Znaczenie i zachowanie?`,`Jaz — niebezpieczeństwo, może być silny prąd; upewnić się, czy można przepływać`,`Jaz = uwaga na prąd.`,1],
+[54,`Czy pod stałymi mostami można przepływać w dowolnym miejscu?`,`Tak, po upewnieniu się co do wysokości i pod oznakowanym przęsłem`,`Przepływaj pod oznakowanym przęsłem.`,0],
+[55,`Cumowanie burta w burtę, znaki na brzegu (rysunek). Można documować?`,`Tak, jest to dozwolone`,`Rozpoznanie z rysunku — cumowanie dozwolone.`,1],
+[56,`Tablica na brzegu (rysunek). Co oznacza?`,`Nakaz nieprzekraczania prędkości 12 km/h`,`Liczba w czerwonej obwódce = limit prędkości.`,1],
+[57,`Znak na moście stałym (rysunek). Jak przechodzić?`,`Trzymając się prawej strony`,`Rozpoznanie z rysunku — trzymaj się prawej.`,1],
+[58,`Co oznacza ten znak na kanale? (rysunek)`,`Dozwolone cumowanie`,`Rozpoznanie z rysunku — cumowanie dozwolone.`,1],
+[59,`Statek podniósł białą kulę (rysunek). Co oznacza?`,`Zawody sportowe (regaty) — nie wpływać, oddalić się`,`Biała kula = regaty, omijaj akwen.`,1],
+[60,`Boja stożkowa (kolor niejasny), płyniesz z prądem. Co i jak minąć?`,`Lewą stronę szlaku — minąć lewą burtą`,`Stożek = strona lewa (zielony); z prądem masz ją po lewej.`,0],
+[61,`Znak jak na rysunku na Zatoce. Co oznacza?`,`Oś/początek toru wodnego (znak bezpiecznej wody) — płynąć wg dalszych znaków`,`Czerwono-białe pasy + czerwona kula = środek toru.`,1],
+[62,`Śniardwy, kurs na S: pława zielona (1) i pława (2) na rysunku. Jak mijać?`,`Obie prawą burtą`,`Rozpoznanie z rysunku — obie po prawej.`,1],
+[63,`Kierunek szlaku żeglownego na jeziorze określa:`,`Urząd żeglugi śródlądowej — z zasady z południa na północ oraz ze wschodu na zachód`,`Kierunek: S→N i E→W.`,0],
+[64,`Co oznacza znak na rysunku?`,`Nakaz zachowania szczególnej ostrożności`,`Rozpoznanie z rysunku — nakaz ostrożności.`,1],
+[65,`Zatoka, wejście do portu na zachód, tyka bez znaku szczytowego (rysunek). Jak minąć?`,`Prawą burtą`,`Rozpoznanie z rysunku.`,1],
+[66,`Znak na kanale (rysunek). Co oznacza?`,`Dozwolone cumowanie`,`Rozpoznanie z rysunku — cumowanie dozwolone.`,1],
+[67,`Kurs na zachód — pława jak na rysunku. Po której stronie minąć?`,`Po północnej`,`Kardynalna — mijasz po jej „nazwanej” stronie (z rysunku: północnej).`,1],
+[68,`Stawa ze znakiem szczytowym: czerwony i zielony trójkąt wierzchołkami (rysunek):`,`Znak stały na środku szlaku oznaczający miejsce niebezpieczne`,`Czerwono-zielony = środek szlaku + niebezpieczeństwo.`,1],
+[69,`Znak w czerwono-czarne pasy z dwiema czarnymi kulami na górze oznacza:`,`Odosobnione niebezpieczeństwo`,`Dwie czarne kule = isolated danger; woda wokół bezpieczna.`,0],
+[70,`Boja czarna u góry, żółta na dole (morze). To znak kardynalny:`,`Północny`,`Czarny NAD żółtym = N (stożki w górę).`,0],
+[71,`Znak w zielono-czerwone pasy oznacza:`,`Rozgałęzienie szlaku żeglownego`,`Pionowe pasy zielono-czerwone = rozgałęzienie.`,0],
+[72,`Północny znak kardynalny ma kolory:`,`Czarny nad żółtym`,`N = czarny na górze, stożki w górę.`,0],
+[73,`Co oznacza znak na rysunku?`,`Zakaz zawracania statków`,`Rozpoznanie z rysunku — zakaz zawracania.`,1],
+[74,`Pława w poziome biało-zielone pasy ze stożkiem (śródlądzie) oznacza:`,`Przeszkodę żeglugową przy lewym brzegu`,`Zielony stożek = lewy brzeg.`,1],
+[75,`To znak żeglugowy:`,`Nakazu — nakaz zachowania szczególnej ostrożności`,`Niebieski okrąg = nakaz.`,1],
+[76,`Kurs ze wschodu na zachód — na kursie północna pława kardynalna. Należy:`,`Minąć ją lewą burtą`,`Przy N kardynalnej przechodzisz po jej stronie północnej — tu wypada lewa burta.`,0],
+[77,`Stawa ze znakiem szczytowym: czerwony trójkąt (rysunek) oznacza:`,`Miejsce niebezpieczne/przeszkodę przy prawym brzegu`,`Czerwony trójkąt = prawy brzeg.`,1],
+[78,`Znak bezpiecznej wody (IALA) ma znak szczytowy:`,`Jedną czerwoną kulę`,`Bezpieczna woda = 1 czerwona kula.`,0],
+[79,`Co oznacza taki znak na moście? (rysunek)`,`Ruch w jednym kierunku pod przęsłem`,`Rozpoznanie z rysunku — ruch jednokierunkowy.`,1],
+[80,`Południowy znak kardynalny oznacza, że bezpieczna woda jest:`,`Na południe od niego`,`Kardynalna nazywa stronę, po której mijasz — S = od południa.`,0],
+[81,`Znak na rysunku oznacza:`,`Wskazanie miejsca do zawracania`,`Rozpoznanie z rysunku — miejsce do zawracania.`,1],
+[82,`Szlak żeglowny to:`,`Oznakowany pas wody o dostatecznej dla żeglugi głębokości i szerokości`,`Szlak = wyznaczona „droga” na wodzie.`,0],
+[83,`Locja to dział wiedzy zajmujący się:`,`Opisem i oznakowaniem dróg wodnych`,`Locja = mapy + znaki dróg wodnych.`,0],
+[84,`Czerwony walec na pławie (śródlądzie) oznacza:`,`Prawą stronę szlaku żeglugowego`,`Walec/czerwony = prawa strona szlaku.`,0],
+[85,`Nurtem nazywamy miejsce na rzece:`,`O największej prędkości wody i największej głębokości`,`Nurt = najgłębiej i najszybciej.`,0],
+[86,`Wracając z morza do portu, czerwoną boję mijamy:`,`Lewą burtą`,`Wracając (region A) czerwone zostają po lewej.`,0],
+[87,`Co oznacza znak na rysunku?`,`Zakaz postoju przy brzegu na cumach lub kotwicy`,`Rozpoznanie z rysunku — zakaz postoju przy brzegu.`,1],
+[88,`Znak blisko lewego brzegu (rysunek). Znaczenie?`,`Miejsce niebezpieczne przy lewym brzegu — ominąć w bezpiecznej odległości`,`Rozpoznanie z rysunku — trzymaj dystans.`,1],
+[89,`Sygnał zapowiadający wkrótce otwarcie mostu lub śluzy to:`,`Jedno światło czerwone i jedno zielone obok siebie`,`Czerwone + zielone razem = „zaraz otworzę”.`,0],
+[90,`W śluzie cumujemy:`,`Na biegowo, cały czas kontrolując napięcie liny`,`Śluza = biegowo, bo poziom wody się zmienia.`,0]
+],
+"Meteorologia":[
+[1,`Widzisz bliską, ciemną chmurę (zdjęcie), słaby wiatr wieje w jej kierunku. Zakładasz:`,`Chmura zmierza ku nam — szykuj się na silny, szkwalisty wiatr i zmianę jego kierunku`,`Cisza + ciemna chmura = zapowiedź szkwału.`,1],
+[2,`Zagęszczenie izobar na mapie pogody informuje o:`,`Wystąpieniu silnego wiatru`,`Gęste izobary = mocny wiatr (jak gęste warstwice = strome zbocze).`,0],
+[3,`Na polskiej mapie synoptycznej skróty „N" i „W" oznaczają:`,`Centrum niżu, centrum wyżu`,`N = Niż, W = Wyż.`,1],
+[4,`Krótkotrwałe i gwałtowne opady występują zwykle przy:`,`Przechodzeniu frontu chłodnego`,`Chłodny front = krótko i ostro.`,0],
+[5,`Podczas bryzy nocnej wiatr wieje:`,`Od lądu do wody`,`Nocą ląd stygnie szybciej — wiatr ucieka na wodę.`,0],
+[6,`W jakim układzie barycznym może występować silniejszy wiatr?`,`Zarówno w wyżu, jak i w niżu — zależy od gradientu ciśnienia`,`Liczy się gradient (różnica ciśnień), nie sama nazwa układu.`,0],
+[7,`Chmury cirrus, potem cirrostratus, altostratus, stratus zwiastują:`,`Front ciepły`,`Chmury schodzące coraz niżej = nadchodzi ciepły front.`,0],
+[8,`„Niż znad Danii pogłębia się i szybko idzie na SE" — na Zalewie Zegrzyńskim:`,`Rosnąca siła wiatru z kierunków zachodnich`,`Pogłębiający się niż = coraz mocniej, wiatr z W.`,0],
+[9,`Izobary na mapach pogody to:`,`Linie łączące punkty o jednakowym ciśnieniu`,`„Izo-bar" = równe ciśnienie.`,0],
+[10,`Fragment mapy synoptycznej (rysunek). Jakiego wiatru spodziewamy się w Polsce?`,`Południowo-wschodniego`,`Kierunek odczytujesz wzdłuż izobar. (rysunek)`,1],
+[11,`Wiatr przyziemny w niżu (półkula N) wieje:`,`Do środka niżu, przeciwnie do wskazówek zegara, odchylony 20°–40° od izobary`,`Niż = w Lewo (CCW), do środka.`,0],
+[12,`Bryza dzienna (morska) to wiatr wiejący:`,`Od strony morza lub jeziora nad ląd`,`W dzień ląd się grzeje — wiatr wieje z chłodnej wody.`,0],
+[13,`Lampa ostrzegawcza (Mazury) — 40 błysków/min. Oznacza:`,`Uwaga — spodziewane burze i wiatr, bez wskazania czasu i miejsca`,`Wolniej miga (40) = „Uwaga".`,0],
+[14,`Halo wokół słońca zwiastuje:`,`Cirrostratus → front ciepły i pogorszenie pogody`,`Halo = ciepły front nadchodzi.`,0],
+[15,`Lampa ostrzegawcza (Mazury) — 90 błysków/min. Oznacza:`,`Niebezpieczeństwo — burza i silny wiatr w bliskim obszarze`,`Szybciej miga (90) = „Niebezpieczeństwo".`,0],
+[16,`Jak przedstawiane jest ciśnienie na mapie pogody?`,`W postaci izobar`,`Ciśnienie = izobary.`,0],
+[17,`Co to jest kondensacja?`,`Zmiana stanu wody z gazowego w ciekły`,`Para → woda.`,0],
+[18,`Skala siły wiatru Beauforta obejmuje:`,`Od 0° do 12° (13-stopniowa)`,`0–12°B.`,0],
+[19,`Diagram wiatru na dobę, prognoza ICM (rysunek). Jak zmieni się kierunek?`,`Na początku SE 3°B, na końcu S–SW 2°B`,`Odczyt z diagramu. (rysunek)`,1],
+[20,`Z których chmur spodziewamy się deszczu?`,`Nimbostratus, Cumulonimbus`,`„Nimbus" w nazwie = deszcz.`,0],
+[21,`Wzrostu wiatru wzdłuż zawietrznego brzegu spodziewamy się:`,`W przerwach (obniżeniach) wysokiej linii brzegowej`,`Dziura w wysokim brzegu = dysza przyspieszająca wiatr.`,0],
+[22,`Bryza dzienna to wiatr wiejący:`,`W dzień od strony morza w kierunku lądu`,`Jak 12 — w dzień z wody na ląd.`,0],
+[23,`Front chłodny z zachodu na wschód nad Polską — na Zalewie Zegrzyńskim:`,`Duże zachmurzenie, burze, szkwały`,`Chłodny front = burze i szkwały.`,0],
+[24,`Schemat radiowego morskiego komunikatu meteo:`,`Ostrzeżenia, sytuacja baryczna, prognoza na 12 h, orientacyjna na kolejne 12 h`,`Kolejność: ostrzeżenia → baryka → 12 h → +12 h.`,0],
+[25,`Front atmosferyczny to:`,`Warstwa rozgraniczająca dwie masy powietrza o różnych właściwościach (temperaturze)`,`Front = granica dwóch mas powietrza.`,0],
+[26,`Ciemna chmura na horyzoncie i grzmoty (rysunek). Spodziewamy się:`,`Gwałtownych opadów i silnych szkwałów`,`Cumulonimbus = szkwał i ulewa.`,1],
+[27,`Ciepłe powietrze napływa na chłodne — to:`,`Front ciepły`,`Ciepłe „wjeżdża" na chłodne = ciepły.`,0],
+[28,`Nadejście Cumulonimbusa zwiastuje:`,`Zgaśnięcie wiatru i nagły, silny wiatr z przeciwnego kierunku`,`Cb = wiatr znika i wraca z drugiej strony.`,0],
+[29,`Cirrus i cirrostratus przy spadku ciśnienia (rysunek) zwiastują:`,`Zbliżanie się frontu ciepłego`,`Jak 7 — chmury pierzaste + spadek = ciepły front.`,1],
+[30,`Symbol na mapie synoptycznej (rysunek) oznacza:`,`Front chłodny`,`Trójkąciki (jak lodowe kolce) = chłodny.`,1],
+[31,`Chmury kłębiaste piętra średniego to:`,`Altocumulusy`,`„Alto" = piętro średnie.`,0],
+[32,`Pogoda w wyżu barycznym to:`,`Małe zachmurzenie, bez opadów`,`Wyż = ładna pogoda.`,0],
+[33,`Wiatr przyziemny w wyżu (półkula N) wieje:`,`Od środka wyżu, zgodnie z ruchem wskazówek zegara, 20°–40° od izobary`,`Wyż = zgodnie z zegarem (CW), na zewnątrz.`,0],
+[34,`Front chłodny z W na E, wiatr SW. Spodziewana zmiana wiatru:`,`Na zachodni i północno-zachodni`,`Za frontem chłodnym wiatr skręca w prawo: SW→W→NW.`,0],
+[35,`Chłodne powietrze napływa pod ciepłe — to:`,`Front chłodny`,`Chłodne „podłazi" pod ciepłe = chłodny.`,0],
+[36,`Beaufort bezpieczny dla przeciętnego jachtu turystycznego:`,`0°–6°B`,`Turystyczny do 6°B.`,0],
+[37,`Nad Polską rozbudowuje się wyż. Spodziewamy się:`,`Niewielkiego zachmurzenia lub bezchmurnie, bez opadów`,`Wyż = ładnie.`,0],
+[38,`Wiatr północno-zachodni wieje:`,`Z północnego-zachodu na południowy-wschód`,`Wiatr nazywamy od strony, SKĄD wieje.`,0],
+[39,`Gdzie w niżu jest najmniejsze i największe ciśnienie?`,`Najmniejsze w środku, największe na zewnątrz`,`Niż = dołek ciśnienia w środku.`,0],
+[40,`Wiatr 1–2°B to:`,`Wiatr słaby`,`1–2°B = słaby.`,0],
+[41,`Chmura w kształcie kowadła, zwiastująca sztorm, to:`,`Cumulonimbus`,`Kowadło = Cb.`,0],
+[42,`Silne szkwały mogą towarzyszyć chmurom:`,`Cumulonimbus`,`Cb = szkwały.`,0],
+[43,`Wiatr 4°B to:`,`Wiatr umiarkowany`,`4°B = umiarkowany.`,0],
+[44,`Front zokludowany powstaje przez:`,`Nasunięcie się szybszego frontu chłodnego na front ciepły`,`Okluzja = chłodny dogonił ciepły.`,0],
+[45,`Cumulusy rosnące i skupiające się w duże zespoły przed południem zwiastują:`,`Pogodę burzową, szkwalisty wiatr`,`Rosnące kłęby = burza po południu.`,0],
+[46,`Długie i umiarkowane opady występują zwykle przy:`,`Przechodzeniu frontu ciepłego`,`Ciepły front = długo i łagodnie.`,0],
+[47,`Środek wyżu na północ od nas. Jakiego wiatru się spodziewać?`,`Północno-wschodniego`,`Wokół wyżu wiatr krąży CW → z N/NE.`,0],
+[48,`Drobne Cumulusy rano, lekko rosnące (rysunek), zwiastują:`,`Ładniejszą, słoneczną pogodę`,`Małe „baranki" = ładnie.`,1],
+[49,`Symbol na mapie synoptycznej (rysunek) oznacza:`,`Front ciepły`,`Półkola = ciepły front.`,1],
+[50,`Symbol na mapie synoptycznej (rysunek) oznacza:`,`Front zokludowany`,`Trójkąty i półkola razem = okluzja.`,1],
+[51,`W radiowych komunikatach pogody podaje się przede wszystkim:`,`Kierunek i siłę wiatru, temperaturę, opad`,`Wiatr + temperatura + opad.`,0],
+[52,`„Ostrzeżenie przed bardzo silnym wiatrem" dotyczy siły:`,`7°B`,`Bardzo silny wiatr / ostrzeżenie = 7°B.`,0],
+[53,`Skala Beauforta określa siłę wiatru w zakresie:`,`0°B–12°B`,`0–12.`,0],
+[54,`Bryza dzienna charakteryzuje się:`,`Wyższym ciśnieniem nad wodą niż nad lądem → ruch powietrza znad wody na ląd`,`Chłodna woda = wyższe ciśnienie → wiatr na ląd.`,0],
+[55,`Wiatr o sile 6°B to:`,`Silny wiatr, ok. 45 km/h (12 m/s)`,`6°B ≈ 12 m/s.`,0],
+[56,`Cumulonimbus to chmura:`,`Kłębiasta, deszczowa, o budowie pionowej`,`Cb = pionowa wieża deszczowa.`,0],
+[57,`Chmury niskie warstwowe to:`,`Stratusy`,`Stratus = warstwa nisko.`,0],
+[58,`Ładną, bezdeszczową pogodę zapowiada:`,`Obfita rosa wieczorem i rano`,`Rosa = jutro ładnie.`,0],
+[59,`Prędkość wiatru podajemy w:`,`Metrach na sekundę, kilometrach na godzinę`,`m/s lub km/h.`,0],
+[60,`Wiatr określony jako „słaby" to w skali Beauforta:`,`2°B`,`Słaby = 2°B.`,0],
+[61,`„Dysza" to zjawisko oznaczające:`,`Znaczny wzrost prędkości wiatru w przerwie wysokiej linii brzegowej`,`Dysza = „gardło" w brzegu przyspiesza wiatr.`,0],
+[62,`Systematyczne sprawdzanie prognoz podczas żeglugi jest:`,`Niezmiernie przydatne`,`Zawsze sprawdzaj pogodę.`,0],
+[63,`Cumulusy o niewielkiej rozciągłości pionowej zwiastują:`,`Dobrą pogodę`,`Płaskie kłęby = ładnie.`,0],
+[64,`Źródłem pewnych informacji o pogodzie nad akwenem jest:`,`Komunikat radiowy/internetowy, serwisy GSM, obserwacja własna`,`Wiele źródeł + własne oko.`,0],
+[65,`Wróżbą ładnej pogody o umiarkowanych wiatrach jest:`,`Czerwony zachód słońca`,`Czerwony zachód = ładnie jutro.`,0],
+[66,`Zapowiedź burz oznacza nadejście:`,`Porywistych wiatrów o sile 6°B i więcej`,`Burza = ≥6°B.`,0],
+[67,`Higrometr służy do pomiaru:`,`Wilgotności`,`„Hygro" = wilgoć.`,0],
+[68,`Chmury powoli zanikają, ciśnienie stałe (rysunek). Spodziewamy się:`,`Podobnej pogody, bez opadów, małe zachmurzenie`,`Nic się nie zmienia = spokój.`,1],
+[69,`Wilgotność względną mierzymy w:`,`Procentach`,`Wilgotność względna = %.`,0],
+[70,`Szkwał to:`,`Gwałtowny wzrost siły wiatru`,`Szkwał = nagły podmuch.`,0],
+[71,`„Małe fale zaczynają się wydłużać, białe grzebienie" dotyczy:`,`4°B`,`Pierwsze grzywacze = 4°B.`,0],
+[72,`Cumulonimbus niesie ze sobą:`,`Silny, szkwalisty wiatr i ulewny deszcz`,`Cb = wiatr + ulewa.`,0],
+[73,`Wiatr 6–7°B to:`,`Wiatr bardzo silny`,`6–7°B = bardzo silny.`,0],
+[74,`Ciśnienie normalne wynosi:`,`1013 hPa`,`1013 hPa.`,0],
+[75,`Określenie „sztorm" dotyczy wiatru o sile:`,`8°B`,`Sztorm = 8°B.`,0],
+[76,`Siłę wiatru mierzy się:`,`Anemometrem`,`Anemometr = wiatromierz.`,0],
+[77,`Północny wiatr wieje:`,`Z północy`,`Nazwa wiatru = strona, skąd wieje.`,0],
+[78,`Siła wiatru zależy od:`,`Gradientu ciśnień między wyżem a niżem`,`Większa różnica ciśnień = mocniejszy wiatr.`,0],
+[79,`Wysoko wypiętrzone Cumulonimbusy (zdjęcie) świadczą o nadejściu:`,`Frontu chłodnego`,`Cb = front chłodny.`,1]
+],
+"Ratownictwo":[
+[1,`Pierwsza pomoc przy krwawiących ranach otwartych kończyn:`,`Przemyć ranę czystą wodą, założyć opatrunek, przekazać do lekarza`,`Przemyj → opatrz → lekarz.`,0],
+[2,`Koło ratunkowe człowiekowi za burtą rzucamy:`,`Od jego nawietrznej`,`Rzucaj od nawietrznej — dowieje/dopłynie do niego.`,0],
+[3,`Wyłowiony człowiek nie oddycha. Co robić?`,`Natychmiast rozpocząć resuscytację i wezwać pomoc`,`Nie oddycha = RKO od razu.`,0],
+[4,`Zapach tlącej się izolacji na jachcie. Najpierw:`,`Zdjąć klemy z akumulatorów / wyłączyć główny wyłącznik`,`Pożar elektryczny = najpierw odetnij prąd.`,0],
+[5,`Sztuczne oddychanie z masażem serca wykonujemy w cyklu:`,`30 uciśnięć mostka i 2 wdmuchnięcia`,`30:2.`,0],
+[6,`Wzywanie pomocy nocą na śródlądziu (tylko latarka):`,`Zataczać zapaloną latarką kręgi`,`Kręgi światłem = wzywam pomocy.`,0],
+[7,`Omega, wieczór, zimna woda, brzeg nawietrzny 300 m — płynąć tratwą do brzegu? Słusznie?`,`Tak, ale dopiero gdy wzywanie pomocy nie dało rezultatu w rozsądnym czasie`,`Najpierw wołaj pomoc, dopiero potem płyń.`,0],
+[8,`Omega, 5 osób, jedna za burtą. Jak podejść i wyciągnąć?`,`Podejść bajdewindem burtą nawietrzną; dwie osoby balastują, dwie wyciągają na śródokręciu`,`Nawietrzną burtą, człowieka na śródokręciu.`,0],
+[9,`Zerwała się top-wanta nawietrzna, maszt cały. Co zrobić?`,`Jak najszybciej wykonać zwrot i ocenić sytuację`,`Zerwana nawietrzna = zrób zwrot, by ją odciążyć.`,0],
+[10,`Nie udaje się postawić mieczówki po wywrotce. Co pomoże?`,`Zrzucenie żagli i położenie masztu`,`Nie idzie? zrzuć żagle, połóż maszt.`,0],
+[11,`Po wywrotce jachtu przede wszystkim:`,`Sprawdzić, czy cała załoga jest na powierzchni; założyć pasy; zabezpieczyć jacht przed odwróceniem do góry dnem`,`Ludzie → pasy → nie dopuść do „grzyba".`,0],
+[12,`Gwałtowne poruszanie się w zimnej wodzie:`,`Skraca czas przeżycia`,`Nie szarp się w zimnej wodzie — tracisz ciepło.`,0],
+[13,`Bajdewind lewego halsu, rozkręcił się ściągacz prawej (zawietrznej) wanty. Co zrobić?`,`Zluzować nieco żagle bez zmiany kursu, połączyć i skręcić ściągacz, zabezpieczyć`,`Zawietrzna wanta jest luźna — naprawisz bez zwrotu.`,0],
+[14,`Silnik na pantografie lewej burty, człowiek za burtą. Jak podejść?`,`Na silniku, w bajdewindzie lub pod wiatr, prawą burtą`,`Podchodź prawą burtą — śruba z dala od człowieka.`,0],
+[15,`Człowieka z wody podejmujemy:`,`Tam, gdzie najłatwiej, przy zachowaniu stateczności jednostki`,`Bezpiecznie i stabilnie.`,0],
+[16,`Przed rozpoczęciem sztucznego oddychania u nieprzytomnego:`,`Udrożnić drogi oddechowe`,`Najpierw drożne drogi oddechowe.`,0],
+[17,`W jakie osobiste środki ratunkowe ma być wyposażony jacht śródlądowy?`,`Wg dokumentu rejestracyjnego/bezpieczeństwa, a jeśli go nie ma — pasy/kamizelki w liczbie osób na jachcie`,`Minimum: 1 kamizelka na każdą osobę.`,0],
+[18,`Silny ból klatki piersiowej przy wdechu. Pierwsza pomoc:`,`Pozycja półsiedząca, okrężna opaska z bandaża na klatkę, środki przeciwbólowe`,`Klatka piersiowa → pozycja półsiedząca.`,0],
+[19,`Widzimy wywrócony jacht i ludzi w wodzie. Jak postępujemy?`,`W bezpiecznej odległości zrzucić żagle, minimalną prędkością podpłynąć, ratować ludzi, potem sprzęt`,`Najpierw ludzie, potem sprzęt.`,0],
+[20,`Czy na Mazurach można korzystać z telefonicznych ostrzeżeń meteo?`,`Tak — usługa SMS z Mazurskiego WOPR`,`WOPR SMS na Mazurach.`,0],
+[21,`Czy na Zatoce Gdańskiej i Zalewie Szczecińskim działa SAR?`,`Tak, z centrum koordynacyjnym w Gdyni i stacjami w portach`,`SAR — centrum w Gdyni.`,0],
+[22,`Alarm „Człowiek za burtą" ogłasza:`,`Osoba, która pierwsza zauważyła wypadnięcie`,`Widzisz — od razu krzycz „człowiek za burtą!".`,0],
+[23,`Pęknięty kadłub, nabiera wody, brak jednostek i portu w pobliżu. Jak wezwać pomoc?`,`Radiotelefonem UKF — procedura MAY DAY`,`Tonę = MAY DAY na UKF.`,0],
+[24,`Wywrotka jest już nieunikniona. Jak się zachować?`,`Działać tak, aby nie wpaść pod żagiel`,`Nie daj się przykryć żaglem.`,0],
+[25,`Silny wiatr, mieczówka przy brzegu nawietrznym, żagle zrzucone. Dalej:`,`Podnieść miecz, załoga w pasach na pokładzie, sztrandować z wiatrem`,`Ratunek: miecz w górę i sztranduj z wiatrem.`,0],
+[26,`Gdy człowiek wypada za burtę, należy:`,`Rzucić mu środki ratunkowe i wykonać odpowiednie podejście`,`Rzuć koło + podejdź.`,0],
+[27,`Najważniejsze obowiązki prowadzącego przed rejsem:`,`Zapoznanie załogi ze sprzętem ratunkowym, jego rozmieszczeniem i obsługą oraz postępowaniem w niebezpieczeństwie`,`Odprawa bezpieczeństwa przed wypłynięciem.`,0],
+[28,`Przy złamaniu kończyny należy:`,`Usztywnić dwa przyległe stawy i szybko zapewnić pomoc lekarską`,`Unieruchom staw powyżej i poniżej złamania.`,0],
+[29,`Ile środków ratunkowych powinno być na jachcie?`,`Tyle, ile jest osób na jachcie`,`1 na głowę.`,0],
+[30,`Hipotermia — jak postępować z poszkodowanym?`,`Chronić przed dalszą utratą ciepła (folia NRC, koc, śpiwór), podać ciepłe słodkie płyny, szybko do lekarza`,`Ogrzewaj powoli + ciepłe słodkie picie.`,0],
+[31,`Pomarańczowy dym w pobliżu jachtu oznacza:`,`Wzywanie pomocy`,`Pomarańczowy dym = SOS.`,0],
+[32,`Dryf do brzegu, wezwano pomoc; z brzegu zielona rakieta i machanie białą chorągiewką. Znaczy:`,`Wskazanie dobrego miejsca do sztrandowania — sztrandować tam`,`Zielona z brzegu = „tu sztranduj".`,0],
+[33,`Jakiego koloru rakiet użyć, by wezwać pomoc?`,`Czerwonych`,`Czerwona rakieta = pomoc.`,0],
+[34,`Numer ratunkowy WOPR (jeziora):`,`601 100 100`,`WOPR: 601 100 100.`,0],
+[35,`Aby ugasić gaśnicą pożar w komorze silnika:`,`Lekko uchylić pokrywę i natychmiast użyć gaśnicy`,`Tylko szpara + gaśnica — nie otwieraj szeroko (tlen podsyci ogień).`,0],
+[36,`Pierwsza pomoc przy oparzeniach:`,`Szybko schłodzić oparzone miejsce zimną wodą i nałożyć jałowy opatrunek`,`Chłodź wodą i przykryj.`,0],
+[37,`Uraz stawu skokowego (ból, zasinienie). Postępowanie:`,`Zimne okłady 15–30 min, unieruchomić staw, środki przeciwbólowe, do lekarza`,`Zimno + unieruchomienie.`,0],
+[38,`Złamany maszt, brak silnika i telefonu, dzień. Jak wzywać pomocy?`,`Podnosząc i opuszczając ręce i/lub zataczając koła dobrze widocznym przedmiotem`,`Machanie rękami góra-dół = wzywam pomocy.`,0],
+[39,`Która grupa znaków to SOS?`,`• • • – – – • • •`,`3 kropki, 3 kreski, 3 kropki.`,0],
+[40,`Prowadzący jacht jest zobowiązany udzielić pomocy:`,`Gdy może zapewnić bezpieczeństwo jachtu i własnej załogi`,`Pomagaj, nie topiąc siebie.`,0],
+[41,`Żółte światło błyskające częściej niż co 1 s (kanał Jegliński). Oznacza:`,`Ostrzeżenie o bezpośrednim niebezpieczeństwie burz i bardzo silnego wiatru`,`Szybciej miga = większe zagrożenie.`,0],
+[42,`Oparzenie kwasem z akumulatora. Pierwsza pomoc:`,`Długo płukać wodą, potem roztworem sody/mydła, nałożyć sterylny opatrunek`,`Kwas = dużo wody, potem soda.`,0],
+[43,`Po poleceniu założenia pasów załoga powinna:`,`Wyjść z pasami na pokład i tam je założyć`,`Pasy zakładaj na pokładzie, nie pod pokładem.`,0],
+[44,`Ból głowy, zaburzenia świadomości, ciepła zaczerwieniona skóra, nudności (lato). To:`,`Porażenie słoneczne — zimne okłady, woda mineralna, pomoc lekarska`,`Przegrzanie = chłodzić i nawadniać.`,1],
+[45,`Czym jest SAR?`,`Służba poszukiwania i ratowania osób w niebezpieczeństwie na morzu (oraz zwalczania zanieczyszczeń)`,`SAR = Search And Rescue.`,0],
+[46,`Żółte światło błyskające co ~2 s (kanał Tałcki). Oznacza:`,`Ostrzeżenie o burzach i możliwości bardzo silnego wiatru`,`Wolniej miga = ostrzeżenie (mniej pilne niż szybkie).`,0],
+[47,`Właściwe postępowanie osoby, która wypadła za burtę:`,`Zachować spokój, oszczędzać siły, dopłynąć do rzuconego koła i spokojnie czekać`,`Nie panikuj, oszczędzaj energię.`,0],
+[48,`Jednostka z prawej burty nadaje sygnał (rysunek). Jak postąpić?`,`Zmienić kurs, podejść i nawiązać z nią łączność`,`Sygnał = ktoś potrzebuje pomocy.`,1],
+[49,`Czy kapitan może na Mazurach zarządzić założenie pasów?`,`Tak`,`Kapitan decyduje o pasach.`,0],
+[50,`Po podjęciu nieprzytomnego z wody najpierw sprawdzamy:`,`Oddech`,`Najpierw oddech.`,0],
+[51,`Jacht w pobliżu ma podniesiony sygnał (rysunek). Co zrobić?`,`Wzywa pomocy — podejść i podjąć odpowiednie działania`,`Sygnał = SOS, pomóż.`,1],
+[52,`Bezpieczniej po pokładzie poruszać się burtą:`,`Nawietrzną`,`Przechył pcha cię do środka — nawietrzna bezpieczniejsza.`,0],
+[53,`Niezatapialny jacht wywrócony ~1 km od brzegu, pomoc bez skutku. Dalej:`,`Załoga ciepło ubrana, w pasach, siedzi na jachcie (nie w wodzie) i wzywa pomocy`,`Zostań przy jachcie — nie płyń.`,0],
+[54,`Kamizelkę asekuracyjną/ratunkową zakładamy:`,`Na ubranie`,`Kamizelka zawsze na wierzch.`,0],
+[55,`Uderzenie bomem w głowę, krótka utrata przytomności. Należy:`,`Zapewnić spokój, zimne okłady na głowę, jak najszybciej do lekarza`,`Uraz głowy = obserwacja i lekarz.`,0],
+[56,`Wejście na mieliznę przy dużej prędkości jest:`,`Niebezpieczne — mogą powstać duże uszkodzenia`,`Szybko na mieliznę = poważne uszkodzenia.`,0],
+[57,`Ocena oddechu poszkodowanego powinna trwać:`,`10 sekund`,`Oddech sprawdzasz przez 10 s.`,0],
+[58,`Ratowaniem życia na morzu zajmują się jednostki:`,`SAR`,`Życie na morzu = SAR.`,0],
+[59,`Żeglując prawym halsem pęka prawa (nawietrzna) wanta:`,`Natychmiast zmieniasz hals`,`Pękła nawietrzna = zwrot, by ją odciążyć.`,0],
+[60,`Do gaszenia rozlanej palącej się benzyny na pokładzie użyjemy:`,`Gaśnicy proszkowej`,`Benzyna = gaśnica proszkowa.`,0],
+[61,`Kamizelka asekuracyjna zapewnia:`,`Doraźne utrzymanie człowieka na powierzchni`,`Asekuracyjna = tylko doraźnie na wodzie.`,0],
+[62,`Szok termiczny jest spowodowany:`,`Gwałtownym zwężeniem naczyń krwionośnych z powodu różnicy temperatur`,`Nagłe wejście do zimnej wody = szok naczyniowy.`,0],
+[63,`Zmniejszenie utraty ciepła w wodzie uzyskamy przez:`,`Podciągnięcie kolan pod brodę i objęcie ich`,`Zwiń się w kłębek (pozycja HELP).`,0],
+[64,`Po stwierdzeniu wypadnięcia człowieka za burtę najpierw:`,`Ogłosić alarm, podać środki ratunkowe, wyznaczyć obserwatora`,`Alarm + koło + obserwator.`,0],
+[65,`Przy podejrzeniu porażenia słonecznego należy:`,`Umieścić w cieniu, podać chłodną, lekko osoloną wodę, zimne okłady na głowę`,`Cień + chłodzenie + nawodnienie.`,0],
+[66,`Zasadę „jedna ręka dla jachtu, druga dla siebie" stosujemy:`,`Podczas wszelkich prac na pokładzie`,`Zawsze trzymaj się jachtu.`,0],
+[67,`Aby zabezpieczyć jacht przed zrobieniem „grzyba" (maszt w dół), należy:`,`Podwiązać pod top masztu koło ratunkowe lub kapok`,`Pływak na topie = maszt nie pójdzie pod wodę.`,0],
+[68,`Podnoszenie i opuszczanie wyprostowanych ramion oznacza:`,`Wzywam pomocy`,`Machanie rękami góra-dół = SOS.`,0],
+[69,`Czy podać przechłodzonemu rozbitkowi alkohol?`,`Nie — alkohol zwiększa utratę ciepła`,`Żadnego alkoholu przy hipotermii.`,0],
+[70,`Na jaki kurs względem wiatru ustawisz jacht przy pożarze na dziobie?`,`Kurs pełny`,`Ogień na dziobie = zejdź na pełny (dym i ogień z dala od załogi).`,0],
+[71,`Kamizelka ratunkowa powinna być:`,`Dobrana według wagi`,`Dobierz kamizelkę do masy ciała.`,0],
+[72,`Po wywrotce jachtu w pierwszej kolejności:`,`Upewnić się, że wszyscy są na powierzchni`,`Najpierw policz głowy.`,0],
+[73,`Przy groźbie wywrotki osoby pod pokładem powinny:`,`Założyć kamizelki, usiąść w kokpicie i szczelnie zamknąć jacht`,`Wyjdź do kokpitu w kamizelce.`,0],
+[74,`Stanie załogantów na pokładzie podczas żeglugi jest:`,`Uzasadnione tylko przy niezbędnych czynnościach (z asekuracją)`,`Bez potrzeby nie stój na pokładzie.`,0],
+[75,`Do wywróconego jachtu, któremu chcemy pomóc, podchodzimy:`,`Od jego zawietrznej`,`Do jednostki podchodź od zawietrznej (nie znosi cię na nią). Do człowieka koło rzucasz od nawietrznej.`,0],
+[76,`Ratowanie mienia na morzu jest:`,`Płatne`,`Mienie = płatne (życie ratuje się za darmo).`,0],
+[77,`Osobę wyciągniętą z wody rozgrzewamy:`,`Przebierając w suche ubranie i podając ciepłą, osłodzoną herbatę`,`Suche ubranie + ciepła słodka herbata.`,0],
+[78,`Zataczane kręgi światłem w nocy oznaczają:`,`Wzywam pomocy`,`Kręgi światłem = SOS.`,0],
+[79,`Kamizelki ratunkowe:`,`Utrzymują człowieka na powierzchni po wypadnięciu za burtę`,`Ratunkowa = utrzyma na wodzie (nawet nieprzytomnego).`,0],
+[80,`Pas bezpieczeństwa z szelkami podczas żeglugi:`,`Zabezpiecza załoganta przed wypadnięciem za burtę jachtu`,`Szelki = zostajesz przypięty do jachtu.`,0]
+],
+"Budowa jachtów":[
+[1,`Szpicgat to kadłub o charakterystyce:`,`Bez pawęży, dziób i rufa ostro zakończone`,`Szpic = ostro zakończony z obu stron.`,0],
+[2,`Lina zaznaczona na czerwono na schemacie olinowania (rysunek) to:`,`Sztag`,`Sztag = wzdłuż (od dziobu do masztu).`,1],
+[3,`Liny podtrzymujące maszt w płaszczyźnie poprzecznej to:`,`Wanty i topwanty`,`Wanty = na boki (poprzecznie).`,0],
+[4,`Topenanta służy do:`,`Ustawiania wysokości noku bomu i zapobiegania opadaniu bomu przy zrzucaniu żagli`,`Topenanta trzyma nok bomu „u góry".`,0],
+[5,`Pawęż to:`,`Rodzaj zakończenia rufy`,`Pawęż = płaska „ścianka" rufy.`,0],
+[6,`Miecz na jachcie to:`,`Opuszczana płyta w skrzyni lub falszkilu w środkowej części jachtu`,`Miecz = ruchoma płyta pod środkiem.`,0],
+[7,`Element takielunku z rysunku to:`,`Szekla`,`Szekla = „ogniwo" z pałąkiem i sworzniem.`,1],
+[8,`O sprawnym chłodzeniu silnika zaburtowego świadczy:`,`Struga wody wypływająca spod silnika`,`Leci woda = chłodzenie działa.`,0],
+[9,`Refpatent to element:`,`Bomu, pozwalający nawijać żagiel na bom`,`Refpatent = rolka do zwijania grota na bom.`,0],
+[10,`Lik przedni to:`,`Nazwa krawędzi żagla`,`Lik = krawędź żagla.`,0],
+[11,`Typ ożaglowania z rysunku to:`,`Jol`,`Jol = dwumaszt z małym bezanem ZA osią steru.`,1],
+[12,`Fok mocuje się do sztagu m.in. przy pomocy:`,`Raks`,`Raksy = haczyki foka do sztagu.`,0],
+[13,`Do prowadzenia i regulacji szotów (np. foka) służą:`,`Kipy`,`Kipa = prowadnica szota.`,0],
+[14,`Główna część urządzenia sterowego zmieniająca kurs to:`,`Płetwa sterowa`,`Płetwa = to, co „skręca" w wodzie.`,0],
+[15,`Sztormreling to:`,`Barierka otaczająca pokład`,`Reling = barierka.`,0],
+[16,`Szkielet jachtu w płaszczyźnie poprzecznej wzmacniają:`,`Wręgi`,`Wręgi = „żebra" kadłuba.`,0],
+[17,`Rodzaj miecza z rysunku:`,`Obrotowy`,`Obraca się wokół osi (sworznia).`,1],
+[18,`Nok to:`,`Jeden z końców bomu (zewnętrzny)`,`Nok = daleki koniec bomu.`,1],
+[19,`Kabestan to urządzenie:`,`Umożliwiające wybieranie lin z dużą siłą`,`Kabestan = kołowrót/winch.`,0],
+[20,`Żagiel ze szkicu to:`,`Fok`,`Fok = żagiel przedni.`,1],
+[21,`Garda (szpona) łączy:`,`Gafel z masztem`,`Garda „obejmuje" maszt pod gaflem.`,0],
+[22,`Główny wzdłużny element kadłuba to:`,`Stępka / kil`,`Stępka = „kręgosłup" wzdłuż jachtu.`,0],
+[23,`Refbanta to:`,`Wzmocnienie żagla z remizkami lub remizkami i refsejzingami`,`Refbanta = wzmocniony pas do refowania.`,0],
+[24,`Pikfał to lina, która:`,`Utrzymuje gafel pod odpowiednim kątem do masztu`,`Pik-fał podnosi „pik" (koniec) gafla.`,0],
+[25,`Kotwica z rysunku to kotwica:`,`Admiralicji`,`Klasyczna kotwica z poprzeczką (sztokiem).`,1],
+[26,`Akumulatory kwasowe bezobsługowe umieszcza się:`,`W wydzielonym, dobrze wentylowanym pomieszczeniu`,`Akumulator = wentylacja (wydziela gazy).`,0],
+[27,`Płetwa steru jest zamocowana w:`,`Jarzmie`,`Jarzmo trzyma płetwę steru.`,0],
+[28,`Bryty to:`,`Pasy tkaniny, z których uszyty jest żagiel`,`Bryty = „paski" żagla.`,0],
+[29,`Osprzęt żaglowy jachtu ze szkicu to:`,`Slup`,`Slup = 1 maszt + grot + fok.`,1],
+[30,`Pomieszczenie do przygotowywania posiłków to:`,`Kambuz`,`Kambuz = kuchnia.`,0],
+[31,`Górny koniec masztu to:`,`Top`,`Top = szczyt masztu.`,0],
+[32,`Końce bomu to:`,`Nok i pięta`,`Nok (zewnętrzny) i pięta (przy maszcie).`,0],
+[33,`Linki do podwiązywania żagla przy refowaniu to:`,`Refsejzingi`,`Refsejzingi = sznurki do zwijania żagla.`,0],
+[34,`Element zaznaczony na czerwono w sterze (rysunek) to:`,`Rumpel`,`Rumpel = drążek w ręce sternika.`,1],
+[35,`Jak bezpiecznie sprawdzić szczelność instalacji gazowej?`,`Wodą ze środkiem pieniącym (mydło, płyn do zmywania)`,`Mydliny pokażą pęcherzyki — nigdy ogniem!`,0],
+[36,`Flagsztok to:`,`Drzewce, na którym podnosi się banderę`,`Flag-sztok = maszcik na banderę.`,0],
+[37,`Jeden maszt, grot i fok to osprzęt:`,`Slup`,`Slup.`,0],
+[38,`Hals to lina mocująca:`,`Dolny róg żagla przy liku przednim`,`Hals = przedni-dolny róg żagla.`,0],
+[39,`Jeden maszt i jeden żagiel (Optymist) to osprzęt:`,`Ket`,`Ket = jeden żagiel.`,0],
+[40,`Lina do podnoszenia miecza to:`,`Fał miecza`,`Fał = podnosi (tu: miecz).`,0],
+[41,`Rodzaj ożaglowania z rysunku:`,`Rejowe`,`Reje = poprzeczne drzewca z żaglami.`,1],
+[42,`Żagiel podnoszony na sztagu slupa to:`,`Fok`,`Na sztagu = fok.`,0],
+[43,`Szoty służą do:`,`Wybierania i luzowania żagli przy manewrach`,`Szot = „gaz" żagla.`,0],
+[44,`Kotwica z rysunku to:`,`Danfortha`,`Danforth = płaskie, szerokie łapy.`,1],
+[45,`Do mocowania lin do żagli lub okuć mogą służyć:`,`Szekle`,`Szekla łączy.`,0],
+[46,`Element olinowania z rysunku to:`,`Kausza`,`Kausza chroni oko liny przed przetarciem.`,1],
+[47,`Bulbkil to:`,`Rodzaj falszkila z balastem`,`Bulb = balast (bulwa) na dole kila.`,0],
+[48,`Który element NIE jest częścią żagla?`,`Kipa`,`Kipa to okucie, nie żagiel.`,0],
+[49,`Duży żagiel na sztagu sięgający poza wanty to:`,`Genua`,`Genua = wielki fok zachodzący za wanty.`,0],
+[50,`Obszytą dla wzmocnienia krawędź żagla nazywamy:`,`Likiem`,`Lik = brzeg żagla.`,0],
+[51,`Rumpel to element urządzenia:`,`Sterowego`,`Rumpel = ster.`,0],
+[52,`Element zaznaczony na czerwono (rysunek) to:`,`Płetwa steru`,`Płetwa = część steru w wodzie.`,1],
+[53,`Gdy z otworu odpływowego silnika przestanie lecieć woda:`,`Natychmiast wyłączyć silnik`,`Brak wody = STOP (silnik się przegrzeje).`,0],
+[54,`Przy ożaglowaniu bermudzkim krawędź mocowana do masztu to:`,`Lik przedni`,`Przy maszcie = lik przedni.`,0],
+[55,`Do regulacji napięcia olinowania stałego służą:`,`Ściągacze`,`Ściągacz napina wanty/sztagi.`,0],
+[56,`Najczęstsze napięcie akumulatorów jachtowych to:`,`12 V`,`12 V.`,0],
+[57,`Kluza to:`,`Okucie/otwór w nadburciu do prowadzenia cum i szpringów`,`Kluza = „oczko" na cumę.`,0],
+[58,`Po użyciu kuchenki gazowej jako pierwsze należy:`,`Zamknąć dokładnie zawór butli gazowej`,`Najpierw zawór butli, potem palnik.`,0],
+[59,`Woda wylatująca z boku pracującego silnika świadczy o:`,`Prawidłowym działaniu chłodzenia`,`Leci woda = OK.`,0],
+[60,`Elementy rozpierające wanty (czerwone na szkicu) to:`,`Salingi`,`Saling = poprzeczka rozpierająca wanty.`,1],
+[61,`Spinaker to żagiel na kursach:`,`Pełnych (baksztag, fordewind)`,`Spinaker = „balon" z wiatrem.`,0],
+[62,`Półkluza to:`,`Okucie otwarte od góry, w którym pracują cumy i szpringi`,`Pół-kluza = otwarta u góry.`,0],
+[63,`Aby móc kłaść maszt, jest on osadzony:`,`Obrotowo w tzw. cęgach na pokładzie lub nadbudówce`,`Cęgi = zawias masztu.`,0],
+[64,`Refszkentla to lina napinająca:`,`Róg szotowy żagla przy refowaniu`,`Refszkentla ściąga tylny-dolny róg.`,0],
+[65,`Żagiel ze szkicu to:`,`Bezan`,`Bezan = tylny żagiel na bezanmaszcie.`,1],
+[66,`W jakich silnikach wlewa się olej do benzyny?`,`Dwusuwach`,`Dwusuw = mieszanka (olej + benzyna).`,0],
+[67,`Forpik to:`,`Pomieszczenie na dziobie jachtu`,`For = przód (dziób).`,0],
+[68,`Urządzenie do podnoszenia i opuszczania silnika przyczepnego to:`,`Pantograf`,`Pantograf podnosi silnik.`,0],
+[69,`Jacht o osprzęcie kecz to jednostka:`,`Z dwoma masztami`,`Kecz = 2 maszty (bezan przed osią steru).`,0],
+[70,`Szpring dziobowy biegnie:`,`Od dziobu na ląd w stronę rufy jachtu`,`Szpring = skos; dziobowy biegnie ku rufie.`,0],
+[71,`Kontrafał to:`,`Lina do opuszczania żagla, działająca przeciwnie do fału`,`Kontra-fał = ciągnie w dół.`,0],
+[72,`Kokpit to:`,`Przestrzeń dla załogi, skąd obsługuje się jacht (szoty, ster)`,`Kokpit = „stanowisko" sternika.`,0],
+[73,`Raksy to:`,`Okucia (haczyki) mocujące żagiel do sztagu`,`Raksy = haczyki do sztagu.`,0],
+[74,`Komory wypornościowe służą do:`,`Zapewnienia pływalności po zalaniu/wywrotce`,`Komory = jacht nie tonie.`,0],
+[75,`Po uruchomieniu silnika przyczepnego najistotniejsze jest:`,`Sprawdzenie wypływu wody chłodzącej`,`Zawsze sprawdź wodę chłodzącą.`,0],
+[76,`Achterpik znajduje się:`,`W rufowej części jachtu`,`Achter = tył (rufa).`,0],
+[77,`Refsejzingi to linki służące do:`,`Mocowania żagla do bomu przy refowaniu`,`Jak 33 — sznurki do zwijania.`,0],
+[78,`Do olinowania ruchomego zaliczamy:`,`Fały`,`Ruchome = fały i szoty (biegają).`,0],
+[79,`Jakie paliwo w czterosuwowych silnikach przyczepnych?`,`Czysta benzyna`,`Czterosuw = sama benzyna.`,0],
+[80,`Brest to lina cumownicza biegnąca:`,`Prostopadle z jachtu do nabrzeża`,`Brest = na wprost do kei.`,0],
+[81,`Rodzaj miecza z rysunku:`,`Szybrowy`,`Szybrowy = wsuwany pionowo (jak szyber).`,1],
+[82,`Lina zaznaczona na czerwono (rysunek olinowania) to:`,`Achtersztag`,`Achter = tył → achtersztag podpiera maszt z rufy.`,1],
+[83,`Żagiel mocowany do masztu i bomu (slup) to:`,`Grot`,`Grot = główny żagiel przy maszcie.`,0],
+[84,`Lazy jack to:`,`System linek od masztu do bomu (często z pokrowcem)`,`Lazy jack = „koszyk" łapiący opadający grot.`,0],
+[85,`Knaga służy do:`,`Mocowania lin`,`Knaga = „rożek" do wiązania liny.`,0],
+[86,`Linki do podwiązywania żagla przy refowaniu to:`,`Refsejzingi`,`Jak 33/77.`,0],
+[87,`Obciągacz bomu służy do:`,`Zabezpieczenia bomu na kursach pełnych przed unoszeniem w górę`,`Obciągacz trzyma bom w dole.`,0],
+[88,`Końce masztu to:`,`Pięta i top`,`Pięta (dół) i top (góra).`,0],
+[89,`Kambuz to:`,`Przedział kuchenny`,`Kambuz = kuchnia.`,0],
+[90,`Druga część masztu, nad kolumną, to:`,`Stenga`,`Stenga = przedłużenie masztu w górę.`,0],
+[91,`Przy prawidłowo postawionym foku najbliżej sztagownika jest róg:`,`Halsowy`,`Przód-dół = róg halsowy (przy sztagu).`,0],
+[92,`Części masztu to m.in.:`,`Kolumna, stenga, top`,`Kolumna → stenga → top.`,0],
+[93,`Slup to jacht:`,`Z jednym masztem i dwoma żaglami`,`Slup = 1 maszt + 2 żagle.`,0],
+[94,`Kompas magnetyczny służy do wyznaczania:`,`Kierunku`,`Kompas = kierunek.`,0],
+[95,`Lina z rufy na keję w stronę śródokręcia to:`,`Szpring rufowy`,`Z rufy ku środkowi = szpring rufowy.`,0],
+[96,`Liny napinające lik dolny grota to:`,`Hals i szkentla`,`Dół grota napinają hals + szkentla.`,0],
+[97,`Log służy do pomiaru:`,`Drogi przebytej przez jacht i jego prędkości`,`Log = „licznik" drogi i prędkości.`,0],
+[98,`Lina z dziobu na keję w stronę śródokręcia to:`,`Szpring dziobowy`,`Jak 70 — dziobowy szpring ku środkowi.`,0],
+[99,`Naprężenie liku dolnego grota uzyskujemy wybierając:`,`Szkentlę`,`Szkentla napina dół grota.`,0],
+[100,`Najczęściej spotykany typ ożaglowania to:`,`Slup`,`Slup najpopularniejszy.`,0],
+[101,`Schowek na dziobie to:`,`Forpik`,`Forpik = schowek dziobowy.`,0],
+[102,`Na rysunku pokazano:`,`Podwięź burtowa`,`Element wzmacniający/mocujący przy burcie. (rysunek)`,1],
+[103,`Dwumaszt, przedni maszt wyższy, 3 żagle (DZ). Osprzęt to:`,`Kecz`,`Kecz = 2 maszty, bezan przed osią steru.`,0],
+[104,`Stępka to:`,`Główny element konstrukcji wzdłużnej`,`Stępka = kręgosłup wzdłuż jachtu.`,0],
+[105,`Bakburta to:`,`Lewa burta`,`Bakburta = lewa (patrząc do dziobu).`,0],
+[106,`Kecz i jol to:`,`Typy osprzętu żaglowego`,`Kecz/jol = dwumasztowce.`,0],
+[107,`Element w uchu liny, chroniący ją przed przecieraniem, to:`,`Kausza`,`Kausza chroni oko liny.`,0],
+[108,`Silnik przyczepny uruchamiamy ze śrubą:`,`Zanurzoną w wodzie`,`Śruba w wodzie — inaczej brak chłodzenia.`,0],
+[109,`Jaką rolę pełni bakista?`,`Miejsce na cumy, odbijacze, hole`,`Bakista = schowek bosmański.`,0],
+[110,`Sztag to lina:`,`Podtrzymująca maszt w osi jachtu, od dziobu do masztu`,`Sztag = wzdłuż (od dziobu).`,0],
+[111,`Kontrafał miecza na jachcie mieczowym:`,`Opuszcza płetwę mieczową i blokuje ją w dolnym położeniu`,`Kontrafał ciągnie miecz w dół i trzyma.`,0],
+[112,`Kausza to:`,`Metalowe okucie w uchu liny, zapobiegające jej przecieraniu`,`Jak 107 — chroni oko liny.`,0],
+[113,`Tylna krawędź żagla to:`,`Lik wolny`,`Tył żagla = lik wolny (achterlik).`,0]
+],
+"Teoria żeglowania":[
+[1,`Struga powietrza opływająca żagiel od strony zawietrznej tworzy obszar:`,`Podciśnienia`,`Zawietrzna strona żagla „ssie" (podciśnienie), jak górna strona skrzydła.`,0],
+[2,`Siła, której zawdzięczamy ruch jachtu do przodu, to:`,`Siła ciągu`,`Ciąg = do przodu.`,0],
+[3,`Slup zrównoważony na bajdewindzie; zerwał się szot grota. Jacht:`,`Zwiększy zawietrzność`,`Brak grota (z tyłu) → środek ożaglowania do przodu → jacht odpada (zawietrzny).`,0],
+[4,`Przy słabych wiatrach wybrzuszenie żagla powinno być:`,`Większe`,`Słabo wieje = pełniejszy, „workowaty" żagiel.`,0],
+[5,`Początkowe przechylanie jachtu balastowego powoduje:`,`Wzrost momentu prostującego`,`Balast im bardziej przechyla, tym mocniej prostuje.`,0],
+[6,`Zbyt mocne wybranie żagli względem kursu spowoduje:`,`Spadek prędkości i wartości siły aerodynamicznej`,`Przebrane żagle = dławisz jacht.`,0],
+[7,`Największy wpływ na stateczność poprzeczną lekkiego jachtu ma:`,`Kształt kadłuba (potem konstrukcja i balastowanie)`,`Mieczówka trzyma się głównie kształtem kadłuba.`,0],
+[8,`Największy moment prostujący jachtu mieczowego jest przy przechyle:`,`30–45°`,`Mieczówka „najmocniej prostuje" przy 30–45°.`,0],
+[9,`Przy silnych wiatrach żagle powinny być:`,`Bardziej płaskie`,`Mocno wieje = płaski żagiel.`,0],
+[10,`Aby gwałtownie odpaść na slupie (poza sterem) należy:`,`Luzować szoty grota, zostawiając wybrany fok`,`Puść grot, trzymaj fok — fok spycha dziób od wiatru.`,0],
+[11,`Kąt krytyczny to:`,`Kąt, po przekroczeniu którego jacht się wywróci`,`Kąt krytyczny = punkt bez powrotu.`,0],
+[12,`Siła aerodynamiczna to:`,`Siła powstająca na żaglach pod działaniem wiatru`,`Wiatr na żaglu = siła aerodynamiczna.`,0],
+[13,`Kurs, na którym wiatr rzeczywisty wieje prostopadle do osi jachtu, to:`,`Półwiatr`,`Półwiatr = wiatr z boku (~90°).`,0],
+[14,`Przesunięcie załogi z rufy na dziób spowoduje:`,`Wzrost nawietrzności`,`Ciężar na dziób → jacht ostrzy (nawietrzny).`,0],
+[15,`Przejście z baksztagu jednego halsu na baksztag drugiego halsu to:`,`Zwrot przez rufę`,`Rufa przez linię wiatru = zwrot przez rufę.`,0],
+[16,`Wiatr pozorny to:`,`Wypadkowa wiatru własnego i rzeczywistego`,`Pozorny = rzeczywisty + ruch jachtu.`,0],
+[17,`Zwiększenie nawietrzności uzyskamy przez:`,`Zrzucenie foka`,`Mniej z przodu (fok) → jacht ostrzy.`,0],
+[18,`Przejście od bajdewindu do baksztagu tego samego halsu to:`,`Odpadanie`,`Z ostrego na pełniejszy = odpadanie.`,0],
+[19,`Jachty ostrzące bez udziału steru są:`,`Nawietrzne`,`Sam ostrzy = nawietrzny.`,0],
+[20,`Podniesienie płetwy sterowej o 45° spowoduje:`,`Pogorszenie sterowności`,`Mniej płetwy w wodzie = gorzej steruje.`,0],
+[21,`Na jakich kursach najbardziej przydatny jest obciągacz bomu?`,`W fordewindzie i baksztagu`,`Kursy pełne (z wiatrem) = obciągacz trzyma bom w dole.`,0],
+[22,`Wiatr pozorny na kursie fordewind jest:`,`Słabszy od wiatru rzeczywistego`,`Uciekasz z wiatrem = pozorny słabszy.`,0],
+[23,`Siła wyporu jachtu zależy od:`,`Ciężaru jachtu`,`Archimedes — ile waży, tyle wody wypiera.`,0],
+[24,`Fordewind: fok po prawej, grot po lewej. Jacht płynie:`,`Prawym halsem`,`Grot po lewej = wiatr z prawej = prawy hals.`,0],
+[25,`Jak zwiększyć zawietrzność jachtu?`,`Zwiększyć powierzchnię żagli przednich`,`Więcej foka (z przodu) = zawietrzność.`,0],
+[26,`Jachty mieczowe wywracają się po przechyleniu o około:`,`60–80°`,`Mieczówka „kładzie się" przy 60–80°.`,0],
+[27,`Najostrzej 40° do wiatru — jaki kąt martwy?`,`80°`,`Kąt martwy = 2× najostrzejszy (2×40 = 80°).`,0],
+[28,`Siła aerodynamiczna na żaglu jest efektem:`,`Różnicy ciśnień między stronami żagla`,`Różnica ciśnień = siła.`,0],
+[29,`Jaki wiatr działa na jacht w ruchu?`,`Wiatr pozorny`,`Płyniesz = czujesz pozorny.`,0],
+[30,`Odpadanie oznacza, że:`,`Zmieniamy kurs z ostrzejszego na pełniejszy`,`Odpadasz = od wiatru (pełniej).`,0],
+[31,`Płynne ostrzenie na slupie uzyskamy przez:`,`Wybranie do optymalnej pracy grota, potem foka`,`Ostrzysz — najpierw grot (ciągnie dziób do wiatru).`,0],
+[32,`Refowanie żagla to:`,`Zmniejszenie powierzchni żagla i obniżenie jego środka`,`Ref = mniejszy i niższy żagiel.`,0],
+[33,`Wzrost prędkości (dodatkowy silnik) sprawia, że wiatr pozorny jest:`,`Ostrzejszy i silniejszy`,`Szybciej = pozorny ostrzejszy.`,0],
+[34,`Zwrot przez rufę to:`,`Przejście rufą linii wiatru z baksztagu jednego halsu na baksztag drugiego`,`Rufa przez wiatr.`,0],
+[35,`O stateczności poprzecznej decyduje wzajemne położenie:`,`Środka ciężkości i środka wyporu zanurzonej części kadłuba`,`SC vs SW decyduje o stateczności.`,0],
+[36,`Skręcanie jachtem w kierunku linii wiatru to:`,`Ostrzenie`,`Do wiatru = ostrzenie.`,0],
+[37,`Wyporność pływaków wywracalnego jachtu (w litrach) względem masy (kg) powinna być:`,`Większa`,`Litry pływaków > kilogramy masy (żeby nie utonął).`,0],
+[38,`Sektor po obu stronach linii wiatru, w którym żagle łopoczą, to:`,`Kąt martwy`,`Kąt martwy = strefa łopotu (nie popłyniesz).`,0],
+[39,`Prawidłowy zwrot przez sztag to:`,`Przejście dziobem linii wiatru z bajdewindu jednego halsu na bajdewind drugiego`,`Dziób przez wiatr.`,0],
+[40,`Silnik stacjonarny, jacht płynie wstecz, ster wychylony w lewo. Jacht:`,`Rufa skręci w stronę wychylenia steru`,`Na wstecznym rufa idzie tam, gdzie ster.`,0],
+[41,`Znaczne zarefowanie grota przy pełnym foku (slup) spowoduje:`,`Zwiększenie zawietrzności`,`Mniej grota = środek do przodu = zawietrzność.`,0],
+[42,`Wielkość siły aerodynamicznej (przy tej samej sile wiatru) zależy od:`,`Kąta natarcia, powierzchni i profilu żagla`,`Kąt + powierzchnia + kształt żagla.`,0],
+[43,`Refowanie tylko foka (roler na sztagu) spowoduje:`,`Przesunięcie środka ożaglowania do tyłu`,`Mniej foka (z przodu) → środek do tyłu → nawietrzność.`,0],
+[44,`Slup (grot i fok) płynie lewym halsem, jeżeli:`,`Ma wiatr z lewej burty (grot wybrany po prawej)`,`Wiatr z lewej = lewy hals (grot na prawo).`,0],
+[45,`Refowanie grota do bomu na slupie spowoduje:`,`Obniżenie i przesunięcie środka ożaglowania do przodu`,`Ref grota = niżej i do przodu.`,0],
+[46,`Nadmierne wybranie prawidłowo ustawionych żagli spowoduje:`,`Zmniejszenie siły ciągu i na pewnych kursach wzrost dryfu`,`Przebrane = mniej ciągu, więcej dryfu.`,0],
+[47,`Moment prostujący przy przechyle ~45° jest bliski zeru. To jacht:`,`Wywracalny`,`Prostujący znika przy 45° = wywracalny.`,0],
+[48,`Halsowanie pod silny wiatr na slupie turystycznym — najbezpieczniej:`,`Zarefować grot i postawić/zarefować mniejszy fok`,`Silny wiatr = zmniejsz żagle (ref grota + mały fok).`,0],
+[49,`Zrzucenie foka na slupie (grot i fok postawione) spowoduje:`,`Zwiększenie nawietrzności`,`Bez foka = jacht ostrzy (nawietrzny).`,0],
+[50,`Aby ułatwić odpadanie z półwiatru (fok i grot) należy:`,`Luzować szoty grota`,`Puść grot = jacht odpada.`,0],
+[51,`Na jakich kursach najbardziej przydatny jest obciągacz bomu?`,`W fordewindzie i baksztagu`,`Jak 21 — kursy pełne.`,0],
+[52,`Siła powodująca dryf jachtu to:`,`Składowa siły aerodynamicznej prostopadła do osi jachtu`,`Dryf = boczna składowa siły aero.`,0],
+[53,`Jacht stoi zacumowany do boi. Jaki wiatr odczuwamy?`,`Rzeczywisty`,`Stoisz = czujesz wiatr rzeczywisty.`,0],
+[54,`O stateczności poprzecznej decyduje położenie:`,`Środka ciężkości i środka wyporu zanurzonej części kadłuba`,`Jak 35 — SC vs SW.`,0],
+[55,`Wyporność pływaków wywracalnego jachtu (litry) względem masy (kg):`,`Większa`,`Jak 37 — pływaki > masa.`,0],
+[56,`Ruch naprzód, ster w lewo — jacht:`,`Skręt w lewo: dziób w lewo, rufa w prawo`,`Ster w lewo = dziób w lewo.`,0],
+[57,`Prawidłowy zwrot przez rufę to:`,`Przejście rufą linii wiatru z baksztagu na baksztag przeciwnego halsu`,`Jak 34 — rufa przez wiatr.`,0],
+[58,`Kurs 60° do wiatru rzeczywistego nazywamy:`,`Bajdewind`,`~45–80° = bajdewind.`,0],
+[59,`Obniżenie środka ożaglowania (refowanie) na moment przechylający:`,`Zmniejsza go`,`Niższy żagiel = mniejszy przechył.`,0],
+[60,`Ciśnienie powietrza po stronach żagla:`,`Spada po stronie zawietrznej`,`Zawietrzna „ssie" (podciśnienie).`,0],
+[61,`Na kursie baksztag siła powodująca dryf jest:`,`Najmniejsza`,`Pełny kurs = mały dryf.`,0],
+[62,`Fordewind to kurs, przy którym wiatr wieje:`,`Dokładnie od strony rufy`,`Fordewind = wiatr w plecy.`,0],
+[63,`Czy podniesienie miecza na baksztagu zwiększy dryf?`,`Nie, bo siła aerodynamiczna jest skierowana zgodnie z ruchem jachtu`,`Na pełnym kursie miecz mniej potrzebny.`,0],
+[64,`Jakim kursem płynie jacht z rysunku (wiatr rzeczywisty — niebieska strzałka)?`,`Baksztagiem`,`Odczyt z rysunku (wiatr zza trawersu). (rysunek)`,1],
+[65,`Przesunięcie środka bocznego oporu mieczówki uzyskamy przez:`,`Balastowanie wzdłużne (dziób/rufa) i/lub ustawienie miecza`,`Obciążenie dziobu/rufy + miecz przesuwają opór boczny.`,0],
+[66,`Jednoczesne zarefowanie grota (do masztu) i foka (roler) na zrównoważonym slupie:`,`Zwiększenie zawietrzności`,`Grot rolowany traci więcej pola z tyłu → zawietrzność.`,0],
+[67,`Kadłub w przechyle, SC i SW jak na rysunku. Po zwiększeniu przechyłu jacht:`,`Przewróci się`,`Układ SC/SW daje moment wywracający. (rysunek)`,1],
+[68,`Bajdewind, wiatr rzeczywisty >0. Największą prędkość ma zawsze:`,`Wiatr pozorny`,`Na kursach na wiatr pozorny > rzeczywisty.`,0],
+[69,`Żegluga z wiatrem przy bardzo silnym wietrze (slup) — najbezpieczniej:`,`Zrzucić grot i postawić mniejszy fok`,`Sztorm z wiatrem = na samym (małym) foku.`,0],
+[70,`Slup zrównoważony; zerwał się szot grota. Jacht:`,`Odpadnie`,`Brak grota = dziób ucieka od wiatru (odpada).`,0],
+[71,`Najostrzej 40° do wiatru — kąt martwy wynosi:`,`80°`,`2×40 = 80° (jak 27).`,0],
+[72,`Dużo osób równomiernie (bez balastowania) na mieczówce — stateczność:`,`Pogorszy się, bo środek ciężkości przesunie się do góry`,`Ludzie wysoko = SC w górę = mniej stateczny.`,0],
+[73,`Moment prostujący dodatni w zakresie 0°–90°. To jacht:`,`Niewywracalny`,`Prostuje aż do 90° = niewywracalny.`,0],
+[74,`Wskaźnik wiatru jachtu stojącego nieruchomo wskazuje wiatr:`,`Rzeczywisty`,`Stoisz = rzeczywisty (Windex).`,0],
+[75,`Zmiana kursu z bajdewindu na baksztag (z ustawieniem żagli):`,`Siła przechylająca maleje`,`Odpadasz = mniejszy przechył.`,0],
+[76,`Przegłębienie dziobu jachtu powoduje:`,`Zwiększenie nawietrzności`,`Dziób w dół = jacht ostrzy (nawietrzny).`,0],
+[77,`Na kursie bajdewind siła powodująca dryf:`,`Osiąga wartość maksymalną`,`Kurs na wiatr = największy dryf.`,0],
+[78,`Podniesienie ciężkiego miecza (np. „Tango") — stateczność poprzeczna:`,`Pogorszy się`,`Ciężki miecz w górę = SC wyżej = mniej stateczny.`,0],
+[79,`Wskaźnik wiatru jachtu płynącego na silniku podczas ciszy wskazuje wiatr:`,`Własny (ruchu własnego)`,`Cisza + ruch = wiatr od dziobu (własny).`,0],
+[80,`Aby zwiększyć zawietrzność slupa należy:`,`Wybrać szot foka i wyluzować szot grota`,`Więcej foka, mniej grota = zawietrzność.`,0],
+[81,`Półwiatr to kurs przy wietrze rzeczywistym pod kątem:`,`Nieco ponad 90°`,`Półwiatr ≈ 90° (troszkę więcej).`,0],
+[82,`Wpływ prędkości na dryf na kursach na wiatr:`,`Przy większej prędkości dryf jest mniejszy (większa siła na mieczu/falszkilu)`,`Szybciej = miecz „trzyma", mniej dryfu.`,0],
+[83,`Wyostrzenie z baksztagu do bajdewindu — wiatr pozorny:`,`Jego prędkość wzrośnie`,`Ostrzysz = pozorny mocniejszy.`,0],
+[84,`Znaczne wychylenie steru w prawo (65°–75°) — jacht:`,`Skręca w prawo i hamuje`,`Duży wychył steru = skręt + hamowanie.`,0],
+[85,`Zluzowanie szota foka przed zwrotem przez sztag spowoduje:`,`Zwiększenie nawietrzności`,`Luźny fok = jacht łatwiej ostrzy (wchodzi w zwrot).`,0],
+[86,`Przy odbiorze jachtu z czarteru najważniejsze dla bezpieczeństwa jest info o:`,`Stateczności i zatapialności jachtu`,`Pytaj o stateczność i (nie)zatapialność.`,0],
+[87,`Dla jakiego kursu wiatr rzeczywisty i pozorny mają ten sam kierunek?`,`Fordewindu`,`Fordewind = ten sam kierunek (pozorny tylko słabszy).`,0],
+[88,`Czy wiatr pozorny jest zawsze ostrzejszy od rzeczywistego?`,`Tak, z wyjątkiem fordewindu (ten sam kierunek)`,`Ostrzejszy wszędzie oprócz fordewindu.`,0],
+[89,`Półwiatr, żagle OK; włączenie silnika naprzód (szybciej). Żagle:`,`Trzeba je bardziej wybrać`,`Szybciej = pozorny ostrzejszy = wybierz żagle.`,0],
+[90,`Siła hydrodynamiczna na płetwie steru zależy od:`,`Kąta wychylenia płetwy, jej powierzchni i prędkości jachtu`,`Kąt + powierzchnia + prędkość.`,0],
+[91,`Miecz (lekki) na jachcie mieczowym służy do:`,`Zwiększenia oporu bocznego`,`Miecz = mniej dryfu (opór boczny).`,0],
+[92,`W jakim celu stosuje się zbiorniki/elementy wypornościowe?`,`Dla zapewnienia pływalności po zalaniu/wywrotce`,`Pływaki = jacht nie tonie.`,0],
+[93,`Chwilowy spadek prędkości wiatru rzeczywistego sprawia, że pozorny jest:`,`Ostrzejszy`,`Mniej wiatru = pozorny przesuwa się do przodu (ostrzejszy).`,0],
+[94,`Ostry bajdewind; szkwał zwiększył wiatr rzeczywisty. Jacht może:`,`Popłynąć ostrzej do wiatru`,`Więcej wiatru = pozorny odpada = możesz ostrzyć.`,0],
+[95,`Siła ciągu działająca na żagiel to:`,`Składowa siły aerodynamicznej skierowana do przodu, równolegle do osi jachtu`,`Ciąg = przód (jak 2).`,0],
+[96,`Bajdewind, wiatr >0. Największą prędkość ma zawsze:`,`Wiatr pozorny`,`Jak 68 — pozorny > rzeczywisty.`,0],
+[97,`Pod jakim warunkiem jacht „wywracalny" może być dopuszczony do żeglugi?`,`Jeżeli jest niezatapialny (pływaki w dm³ > masa w kg)`,`Wywracalny OK, o ile niezatapialny.`,0],
+[98,`Od czego zależy droga hamowania jachtu ustawionego w linii wiatru?`,`Od masy jachtu i jego prędkości w momencie ustawienia w linii wiatru`,`Cięższy i szybszy = dłuższa droga hamowania.`,0],
+[99,`Największa siła aerodynamiczna na kursach ostrych powstaje przy kącie natarcia ok.:`,`15°–25°`,`Optymalny kąt natarcia do wiatru pozornego = 15–25°.`,0]
+],
+"Eksploatacja i teoria manewrowania":[
+[1,`Śruba prawoskrętna w osi jachtu, silnik naprzód, ster zero. Reakcja jachtu:`,`Ruszy naprzód z lekkim odrzuceniem rufy w prawo`,`Prawoskrętna naprzód = rufa w prawo (dziób w lewo).`,0],
+[2,`Odejście od boi pod żaglami, silny wiatr, mało miejsca za rufą. Najbezpieczniej:`,`Założyć szpring z rufy na biegowo, postawić żagle, oddać cumę dziobową, po odpadnięciu i wybraniu żagli oddać szpring`,`Mało miejsca za rufą = odejdź na szpringu rufowym.`,0],
+[3,`Przesunięcie ciężkiego jachtu wzdłuż nabrzeża w stronę dziobu. Użyć:`,`Cumy dziobowej i szpringu rufowego`,`Ciągniesz do przodu = cuma dziobowa + szpring rufowy.`,0],
+[4,`Kotwiczenie na 2 m głębokości, promień łukowania ~20 m. Minimalna długość liny:`,`Około 15 m`,`Zwykle 5–7× głębokość, ale tu ogranicza promień łukowania — kompromis ~15 m.`,0],
+[5,`Chcemy nietonące cumy. Jaki rodzaj wybrać?`,`Polipropylenowe`,`Polipropylen pływa.`,0],
+[6,`Slup, baksztag, wszystkie żagle; przechodzimy na silnik. Zrzucanie żagli:`,`Fok wg oceny sternika, grot po ustawieniu jachtu w kącie martwym`,`Grot zrzucasz ustawiony w linii wiatru (kąt martwy).`,0],
+[7,`Najważniejsze czynności przed kotwiczeniem:`,`Sprawdzić głębokość, przygotować odpowiednią długość liny i kotwicę, przygotować żagle do zrzucenia`,`Głębokość + kotwica + żagle.`,0],
+[8,`Holując jacht z brzegu (kanał), linę holowniczą mocujemy:`,`W okolicy masztu jachtu`,`Hol przy maszcie — inaczej jacht się znosi.`,0],
+[9,`Podejście do boi pod żaglami najskuteczniej:`,`Zrzucić fok przed podejściem, dochodzić w linii wiatru, założyć cumę na biegowo, potem zrzucić grot`,`Do boi pod wiatr, na samym grocie.`,0],
+[10,`Podejście do pomostu prawą burtą pod prąd; jacht stoi. Ster w lewo:`,`Dziób odchyla się od pomostu, rufa w stronę pomostu`,`Prąd napiera na płetwę — ster działa jak przy ruchu naprzód.`,0],
+[11,`Zapach tlącej się izolacji (instalacja 12 V). Należy:`,`Natychmiast zdjąć klemy z akumulatorów, a jeśli niedostępne — wyłączyć główny wyłącznik`,`Pożar elektryczny = odetnij prąd.`,0],
+[12,`Po komendzie „przygotować grot do zrzucenia" załogant:`,`Rozbuchtuje fał i układa go tak, by się nie splątał; jest gotów do luzowania fału`,`Przygotuj fał: rozplącz i bądź gotów luzować.`,0],
+[13,`Czarter na Mazurach — najważniejsze dla bezpieczeństwa informacje o jachcie:`,`Czy jest niezatapialny i jaką ma stateczność`,`Pytaj o (nie)zatapialność i stateczność.`,0],
+[14,`Kwasowe akumulatory obsługowe — czy wymagają konserwacji?`,`Tak — dopełniania ubytków wodą destylowaną`,`Obsługowy = dolewasz wody destylowanej.`,0],
+[15,`Komenda „prawy foka szot luz" oznacza:`,`Natychmiastowe i całkowite zluzowanie szota`,`„Luz" = puść całkiem.`,0],
+[16,`Do człowieka za burtą lekkim jachtem mieczowym podchodzimy:`,`Kursem ostry bajdewind i burtą nawietrzną`,`Do człowieka burtą nawietrzną (masz kontrolę nad prędkością).`,0],
+[17,`Woda wypływająca z boku pracującego silnika świadczy o:`,`Prawidłowym działaniu chłodzenia`,`Leci woda = OK.`,0],
+[18,`Śruba prawoskrętna w osi, silnik wstecz, ster zero. Reakcja:`,`Ruszy wstecz z odrzuceniem rufy w lewo`,`Prawoskrętna wstecz = rufa w lewo.`,0],
+[19,`Prawidłowe zakończenie pracy silnika przyczepnego:`,`Zmniejszyć obroty, włączyć „Luz", zgasić wyłącznikiem zapłonu, podnieść na pantografie`,`Obroty↓ → luz → gaś → podnieś.`,0],
+[20,`Ulatnianie się propan-butanu wewnątrz jachtu grozi:`,`Wybuchem — gaz z powietrzem tworzy mieszaninę wybuchową`,`Gaz cięższy od powietrza zbiera się nisko = wybuch.`,0],
+[21,`Ładowanie akumulatora prostownikiem — zaciski:`,`Plus do plusa, minus do minusa`,`+ do +, − do −.`,0],
+[22,`Gwałtowne hamowanie „cała wstecz" (silnik stacjonarny), ster zero. Jacht:`,`Będzie skręcał w zależności od kierunku obrotów śruby`,`Na wstecznym rządzi śruba, nie ster.`,0],
+[23,`Przy odejściu od boi na lewy hals ustawiamy:`,`Fok lewo na wiatr, ster lewo`,`Lewy hals = fok lewo, ster lewo.`,0],
+[24,`Tankowanie zbiornika silnika przyczepnego:`,`Zostawić wolną przestrzeń, zamknąć korek wlewu i zaworek odpowietrzający`,`Nie do pełna + zakręć odpowietrznik.`,0],
+[25,`Podejście do pomostu na rzece (wiatr niezbyt silny):`,`Pod prąd`,`Pod prąd — prąd hamuje, masz sterowność.`,0],
+[26,`Cumowanie dziobem do pomostu, rufą do boi (na silniku):`,`Przygotować cumy, wchodzić powoli, przy mijaniu boi założyć rufową, zatrzymać przed nabrzeżem, założyć dziobową`,`Najpierw rufowa na boję, potem dziobowa na keję.`,0],
+[27,`Rozrefowanie grota (zamocowany hals, refszkentla, refsejzingi):`,`Rozwiązać refsejzingi, zwolnić refszkentlę, zwolnić róg halsowy, wybierać fał`,`Kolejność: sejzingi → szkentla → hals → fał.`,0],
+[28,`Komenda „założyć cumę na biegowo" oznacza:`,`Jeden koniec na pokładzie, drugi przez urządzenie cumownicze na lądzie i z powrotem na pokład`,`Biegowo = obie końcówki u Ciebie (oddasz bez schodzenia).`,0],
+[29,`Cuma dziobowa przy odejściu od boi:`,`Zawiązana na biegowo, odejść na żądany hals`,`Biegowo = oddasz z pokładu.`,0],
+[30,`Rufą do nabrzeża, brak cumy dziobowej, silny wiatr od dziobu:`,`Silnik naprzód wg potrzeby, luzować cumy rufowe i założyć dziobową, silnik stop, ustawić na cumach`,`Dotrzymuj silnikiem, aż złapiesz dziób.`,0],
+[31,`Mieszanka paliwa i oleju do dwusuwu — czym się kierować?`,`Instrukcją obsługi danego silnika`,`Proporcja zawsze z instrukcji.`,0],
+[32,`Aby zmniejszyć dryf, zwłaszcza na ostrych kursach:`,`Opuścić miecz`,`Miecz w dół = mniej dryfu.`,0],
+[33,`5 osób, a na jachcie 4 pasy i 1 koło. Wystarczające?`,`Nie`,`1 kamizelka na osobę — brakuje jednej.`,0],
+[34,`MOB na pełnym baksztagu — najprostszy manewr:`,`Podostrzyć, odejść nie za daleko, zwrot przez sztag i podejść bajdewindem`,`Wróć do człowieka bajdewindem (kontrola prędkości).`,0],
+[35,`Mieczowo-balastowy 7 m, Mazury — orientacyjna długość liny kotwicznej:`,`25 m`,`Mały jacht ≈ 25 m liny.`,0],
+[36,`Morski balastowy 8 m — ile i jakich cum wg dobrej praktyki?`,`4 cumy po ok. 12 m`,`4 cumy × 12 m.`,0],
+[37,`Jak cumujemy w śluzie?`,`Na biegowo`,`Śluza = biegowo (poziom wody się zmienia).`,0],
+[38,`Obroty silnika przyczepnego wzrosły, ale jacht zwalnia i staje. Przyczyna:`,`Rozłączenie śruby z wałkiem (ścięcie sworznia/zabezpieczenia śruby)`,`Obroty w górę, brak ciągu = ścięty klin śruby.`,0],
+[39,`Odejście od pomostu pod żaglami (rysunek, wiatr — niebieska strzałka):`,`Przecumować dziobem do wiatru, postawić żagle, odejść lewym halsem`,`Ustaw dziób do wiatru i odejdź. (rysunek)`,1],
+[40,`Ciasny skręt w prawo na silniku stacjonarnym, mało miejsca:`,`Ster prawo na burt, krótko „cała naprzód", silnik stop — powtarzać do skutku`,`Szarpnięcia naprzód przy sterze na burcie = obrót w miejscu.`,0],
+[41,`Odejście od przystani pod żaglami (rysunek):`,`Przenieść cumę rufową na dziób na biegowo, ustawić się pod wiatr, postawić żagle, oddać cumę`,`Przełóż cumę na dziób i ustaw się pod wiatr. (rysunek)`,1],
+[42,`Przy odejściu od boi na prawy hals ustawiamy:`,`Fok prawo na wiatr, ster prawo`,`Prawy hals = fok prawo, ster prawo.`,0],
+[43,`Odejście wstecz na silniku od pomostu; dziób ma iść w prawo. Ster:`,`W lewo`,`Na wstecznym ster „odwrotnie": chcesz dziób w prawo → ster w lewo.`,0],
+[44,`Intensywne hamowanie żaglami polega na:`,`Wynoszeniu żagli na wiatr`,`Żagle na wiatr = hamowanie.`,0],
+[45,`Dwusuwowy silnik przyczepny mocno dymi. Przyczyna:`,`Zbyt dużo oleju w paliwie`,`Dymi = za dużo oleju w mieszance.`,0],
+[46,`Zwrot przez sztag o najmniejszym promieniu:`,`Ster na burtę; w linii wiatru zluzować grot; nawietrzny szot foka luzować dopiero po odpadnięciu, potem wybrać zawietrzny fok`,`Fok „na backstag" pomaga przerzucić dziób.`,0],
+[47,`Zerwał się fał foka na małej mieczówce (Omega). Naprawa:`,`Położyć maszt i wymienić fał`,`Naprawa fału = połóż maszt.`,0],
+[48,`Odejście przy wietrze odpychającym (rysunek). Na który hals — pierwsze komendy:`,`Na prawy hals: fok prawo na wiatr, ster prawo, cumę oddaj`,`Wiatr odpycha — łatwo odejść na foku. (rysunek)`,1],
+[49,`Kąt martwy 120°. Kiedy zrobić zwrot przez sztag, by jednym halsem dojść do boi?`,`Gdy płynąc ostrym bajdewindem zobaczymy obiekt pod kątem nieco większym niż 120° od kursu`,`Obiekt „za kątem martwym" = czas na zwrot.`,0],
+[50,`Mieczowo-balastowy 7 m, Mazury — długość liny kotwicznej:`,`25 m`,`Jak 35 — ok. 25 m.`,0],
+[51,`Postawienie żagli z silnika:`,`Na małej szybkości ustawić jacht w kącie martwym pod wiatr, postawić grot, potem fok, zgasić silnik`,`Stawiasz żagle pod wiatr, najpierw grot.`,0],
+[52,`Maksymalne naładowanie akumulatora prostownikiem:`,`Ładować minimalnym prądem przez długi czas`,`Wolno i długo = pełne naładowanie.`,0],
+[53,`Bojrep wykorzystujemy:`,`W czasie kotwiczenia`,`Bojrep = lina „ratunkowa" do wyrwania zaklinowanej kotwicy.`,0],
+[54,`Gdy z odpływu pracującego silnika przyczepnego przestanie lecieć woda:`,`Natychmiast wyłączyć silnik`,`Brak wody = STOP (przegrzeje się).`,0],
+[55,`Odejście wstecz na szpringu rufowym (prawa burta); dziób ma odejść od pomostu. Ster:`,`Na prawo`,`Ster tak, by rufa dociskała do szpringu, a dziób odchodził.`,0],
+[56,`Refowanie foka na rolerze:`,`Wybieramy fał rolera, luzując szot foka`,`Zwijasz fok: ciągnij fał rolera, luzuj szot.`,0],
+[57,`Silny wiatr odpychający prostopadle do burty (miejsce po lewej). Odejście pod żaglami:`,`Cuma dziobowa na biegowo, oddać resztę, po ustawieniu w linii wiatru postawić grot i fok, odejść oddając dziobową`,`Wiatr odpycha — zostaw dziobową i pozwól rufie odejść.`,0],
+[58,`Holowanie jachtu z brzegu (kanał) — linę mocujemy:`,`W okolicy masztu jachtu`,`Jak 8 — hol przy maszcie.`,0],
+[59,`Rufą do pomostu, dziobem przy boi, wiatr od rufy. Odejście pod żaglami:`,`Postawić fok, oddać cumy dziobową i rufową, wypłynąć na wprost, potem postawić grot`,`Wiatr od rufy wypcha Cię na foku do przodu.`,0],
+[60,`Wymiana ściętego klina pędnika po wejściu na mieliznę:`,`Wyłączyć silnik, podnieść do pozycji spoczynkowej, zdjąć zawleczkę, odkręcić śrubę, wymienić klin`,`Klin ścięty = wymień (silnik wyłączony!).`,0],
+[61,`Silnik na pantografie podczas żeglugi pod żaglami powinien być:`,`Podniesiony i przygotowany do awaryjnego uruchomienia`,`Pod żaglami silnik w górę, ale w gotowości.`,0],
+[62,`Przesunięcie ciężkiego jachtu wzdłuż nabrzeża w stronę dziobu. Użyć:`,`Cumy dziobowej i szpringu rufowego`,`Jak 3 — dziobowa + szpring rufowy.`,0],
+[63,`Śruba prawoskrętna w osi, silnik wstecz, ster zero. Reakcja:`,`Ruszy wstecz z odrzuceniem rufy w lewo`,`Prawoskrętna wstecz = rufa w lewo.`,0],
+[64,`Podczas pracy silnika należy:`,`Sprawdzać, czy z otworu kontrolnego wypływa woda`,`Pilnuj wypływu wody chłodzącej.`,0],
+[65,`Rozrefowanie grota (hals, refszkentla, refsejzingi):`,`Rozwiązać refsejzingi, zwolnić refszkentlę, zwolnić róg halsowy, wybierać fał`,`Jak 27 — sejzingi → szkentla → hals → fał.`,0],
+[66,`Powtarzające się gaśnięcie 4-suwowego silnika zaburtowego. Przyczyna:`,`Zakręcony zawór odpowietrzenia zbiornika paliwa`,`Gaśnie = odkręć odpowietrznik (bak „się dusi").`,0],
+[67,`Odejście przy wietrze dociskającym (rysunek):`,`Na silniku: cumę dziobową wybierać z prawej burty, ster lewo, wolno naprzód, cumę oddać`,`Wiatr dociska — odejdź na silniku, odpychając dziób. (rysunek)`,1],
+[68,`Uruchamiając kuchenkę gazową, w pierwszej kolejności:`,`Otwieramy zawór na butli`,`Najpierw butla, potem palnik.`,0],
+[69,`Gasząc płomień kuchenki gazowej:`,`Najpierw zakręcamy zawór na butli, potem zawór palnika`,`Gasisz od butli — wypalasz gaz z węża.`,0],
+[70,`Kąt martwy 120°. Kiedy wykonać zwrot, by jednym halsem dojść do punktu?`,`Gdy płynąc bajdewindem zobaczymy obiekt ok. 120° po nawietrznej od kursu`,`Jak 49 — obiekt za kątem martwym.`,0]
+]
+};
+
+// ==== OBRAZKI ŹRÓDŁOWE ====
+const U="https://kliper.net.pl/wp-content/uploads/";
+const IMG={
+"Przepisy":{1:U+"2024/02/kotwa.png",9:U+"2024/02/ozm-300x225-1.png",14:U+"2024/02/polow-300x225-1.png",23:U+"2024/02/krycie-300x184-1.png",27:U+"2024/02/a-300x225-1.png",34:U+"2024/02/romb_quiz-1.png",37:U+"2024/02/zatrzymaj-300x225-1.png",49:U+"2024/02/27-297x300.png",54:U+"2024/02/omin.png",55:U+"2024/02/anchor-300x225-1.png",56:U+"2024/02/mielizna-300x225-1.png",59:U+"2024/02/sil-300x225-1.png",64:U+"2024/02/krycie-300x184-2.png",75:U+"2024/02/ozmdz-300x225-1.png",87:U+"2024/01/lewa-burta-srodladowego-zestawu-holowniczego-o-dlugosci-powyzej-200-300x106.jpg",101:U+"2024/01/lewa-burta-statku-srodladowego-o-dlugosci-powyzej-110-300x112.jpg",113:U+"2024/01/prawa-burta-promu-swobodnego-na-srodladziu-300x129.jpg"},
+"Locja":{1:U+"2024/02/P2_quiz.png",2:U+"2024/02/szer_quiz.png",4:U+"2024/02/dzwiek_quiz.png",5:U+"2024/02/znak1_quiz-1.png",6:U+"2024/02/lewy_quiz.png",7:U+"2024/02/zakaz_quiz.png",8:U+"2024/02/glebokosc_quiz.png",10:U+"2024/02/prom2_quiz.png",11:U+"2024/02/wiecha_quiz.png",13:U+"2024/02/P_quiz.png",14:U+"2024/02/srodek_quiz.png",15:U+"2024/02/obraz_2023-08-06_154823565.png",16:U+"2024/02/znak1_quiz.png",20:U+"2024/02/zagle_quiz.png",21:U+"2024/02/obraz_2023-08-06_153611759.png",22:U+"2024/02/przejscie2_quiz.png",24:U+"2024/02/prom_quiz.png",25:U+"2024/02/prawytr_quiz.png",26:U+"2024/02/wysokosc_quiz.png",27:U+"2024/02/prawy_quiz.png",28:U+"2024/02/kanal_quiz.png",30:U+"2024/02/X_quiz.png",31:U+"2024/02/fale_quiz.png",32:U+"2024/02/przejscie_quiz.png",34:U+"2024/02/3znaki_quiz.png",35:U+"2024/02/sruba_quiz.png",36:U+"2024/02/obraz_2023-08-06_151328911.png",37:U+"2024/02/niebezpieczenstwo_quiz.png",41:U+"2024/02/zolte_quiz.png",42:U+"2024/02/kardynalkaS_quiz.png",44:U+"2024/02/nabieznik_quiz.png",45:U+"2024/02/silnik_quiz.png",46:U+"2024/02/obraz_2023-08-06_154448731.png",47:U+"2024/02/sport_quiz.png",49:U+"2024/02/boczny_quiz.png",50:U+"2024/05/tyka-bez-wiechy.jpg",51:U+"2024/02/rozwidlenie_quiz.png",52:U+"2024/02/obraz_2023-08-06_154313053.png",53:U+"2024/02/jaz_quiz.png",55:U+"2024/02/P4_quiz.png",56:U+"2024/02/12_quiz.png",57:U+"2024/02/romb_quiz.png",58:U+"2024/02/poler_quiz.png",59:U+"2024/02/bialakula_quiz.png",61:U+"2024/02/safewatermark_quiz.png",62:U+"2024/02/boje_quiz.png",64:U+"2024/02/sygnal_quiz.png",65:U+"2024/02/kardynalka_quiz.png",66:U+"2024/02/P3_quiz.png",67:U+"2024/02/IALA_north_cardinal_mark.png",68:U+"2024/01/stawa-niebezpieczenstwo-na-srodku-szlaku.jpg",73:U+"2024/01/znak-zakazu-zawracania.jpg",74:U+"2024/01/zielona-plawa.jpg",75:U+"2024/01/znak-nakaz-zachowania-szegolnej-ostroznosci.jpg",77:U+"2024/01/stawa-niebezpieczenstwo-przy-prawym-brzegu.jpg",79:U+"2024/02/20-242x300.png",81:U+"2024/01/znak-sugerowane-miejsce-zawracania.jpg",87:U+"2024/01/Znak-zakaz-postoju.jpg",88:U+"2024/05/miejsce-niebezpieczne.jpg"},
+"Meteorologia":{1:U+"2024/02/meteo4_quiz.png",3:U+"2024/02/meteo_quiz.png",10:U+"2024/02/meteo2_quiz.png",19:U+"2024/02/obraz_2023-08-06_173526020.png",26:U+"2024/02/obraz_2023-08-06_183053539.png",29:U+"2024/02/cirrus_quiz.png",30:U+"2024/02/obraz_2023-08-06_183909534.png",48:U+"2024/02/obraz_2023-08-06_182253845.png",49:U+"2024/02/meteo8_quiz.png",50:U+"2024/02/meteo5_quiz.png",68:U+"2024/02/meteo4_quiz-300x224.png",79:U+"2024/02/obraz_2023-08-06_183053539-300x223.png"},
+"Ratownictwo":{48:U+"2024/02/rat2_quiz.png",51:U+"2024/02/rat1_quiz.png"},
+"Budowa jachtów":{2:U+"2024/02/obraz_2023-07-12_134601265.png",7:U+"2024/02/obraz_2023-07-10_122018620.png",11:U+"2024/02/jol_quiz.png",17:U+"2024/02/obraz_2023-07-10_120106139.png",20:U+"2024/02/obraz_2023-07-12_133227885.png",25:U+"2024/02/obraz_2023-07-12_125905445.png",29:U+"2024/02/slup_quiz.png",34:U+"2024/02/obraz_2023-07-12_134102047.png",41:U+"2024/02/reje_quiz.png",44:U+"2024/02/danfort_quiz.png",46:U+"2024/02/kausza_quiz.png",52:U+"2024/02/obraz_2023-07-12_132615699.png",60:U+"2024/02/obraz_2023-07-10_121144189.png",65:U+"2024/02/obraz_2023-07-12_130607503.png",81:U+"2024/02/obraz_2023-07-12_124321131.png",82:U+"2024/02/achtersztag_quiz.png",102:U+"2024/01/budowa-jachtu-podwiez-burtowa.jpg"},
+"Teoria żeglowania":{64:U+"2024/02/obraz_2023-08-01_201328985.png",67:U+"2024/02/obraz_2023-08-01_202113431.png"},
+"Eksploatacja i teoria manewrowania":{39:U+"2024/02/obraz_2023-08-05_180655701.png",41:U+"2024/02/obraz_2023-08-05_181229537.png",48:U+"2024/02/obraz_2023-08-05_182524885.png",67:U+"2024/02/obraz_2023-08-05_183658633.png"}
+};
+
+// ==== MATERIAŁY ŹRÓDŁOWE ====
+const SOURCES={
+"Przepisy":[
+ {t:"Rozporządzenie MI z 28.04.2003 – przepisy żeglugowe na śródlądowych drogach wodnych (ISAP)",u:"https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20032122072"},
+ {t:"Przepisy żeglugowe – Urząd Żeglugi Śródlądowej w Gdańsku",u:"https://www.gda.uzs.gov.pl/przepisy-zeglugowe-na-srodladowych-drogach-wodnych"},
+ {t:"Strefa wiedzy – żeglarz jachtowy (Kliper, źródło pytań)",u:"https://kliper.net.pl/strefa-wiedzy-zeglarz-jachtowy/"}
+],
+"Locja":[
+ {t:"Rozporządzenie MI z 28.04.2003 – oznakowanie i znaki żeglugowe (załączniki 7–9, ISAP)",u:"https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20032122072"},
+ {t:"Przepisy żeglugowe – Urząd Żeglugi Śródlądowej w Gdańsku",u:"https://www.gda.uzs.gov.pl/przepisy-zeglugowe-na-srodladowych-drogach-wodnych"},
+ {t:"Strefa wiedzy – żeglarz jachtowy (Kliper, źródło pytań)",u:"https://kliper.net.pl/strefa-wiedzy-zeglarz-jachtowy/"}
+],
+"Meteorologia":[
+ {t:"IMGW-PIB – prognozy, ostrzeżenia i wiedza o pogodzie",u:"https://www.imgw.pl"},
+ {t:"Model pogody ICM (UW) – prognozy dla żeglarzy",u:"https://www.meteo.pl"},
+ {t:"Strefa wiedzy – żeglarz jachtowy (Kliper, źródło pytań)",u:"https://kliper.net.pl/strefa-wiedzy-zeglarz-jachtowy/"}
+],
+"Ratownictwo":[
+ {t:"WOPR – Wodne Ochotnicze Pogotowie Ratunkowe",u:"https://wopr.pl"},
+ {t:"Morska Służba Poszukiwania i Ratownictwa (SAR)",u:"https://www.sar.gov.pl"},
+ {t:"Strefa wiedzy – żeglarz jachtowy (Kliper, źródło pytań)",u:"https://kliper.net.pl/strefa-wiedzy-zeglarz-jachtowy/"}
+],
+"Budowa jachtów":[
+ {t:"Materiały na żeglarza jachtowego – budowa i takielunek (Błękitny Piotruś)",u:"https://www.blekitnypiotrus.pl/bpiotrus/zeglarz-materialy/zeglarz-jachtowy/"},
+ {t:"Ożaglowanie – Wikipedia (typy osprzętu, części żagla)",u:"https://pl.wikipedia.org/wiki/O%C5%BCaglowanie"},
+ {t:"Strefa wiedzy – żeglarz jachtowy (Kliper, źródło pytań)",u:"https://kliper.net.pl/strefa-wiedzy-zeglarz-jachtowy/"}
+],
+"Teoria żeglowania":[
+ {t:"Materiały na żeglarza jachtowego – teoria żeglowania (Błękitny Piotruś)",u:"https://www.blekitnypiotrus.pl/bpiotrus/zeglarz-materialy/zeglarz-jachtowy/"},
+ {t:"Kurs względem wiatru – Wikipedia",u:"https://pl.wikipedia.org/wiki/Kurs_wzgl%C4%99dem_wiatru"},
+ {t:"Strefa wiedzy – żeglarz jachtowy (Kliper, źródło pytań)",u:"https://kliper.net.pl/strefa-wiedzy-zeglarz-jachtowy/"}
+],
+"Eksploatacja i teoria manewrowania":[
+ {t:"Materiały na żeglarza jachtowego – manewrowanie i eksploatacja (Błękitny Piotruś)",u:"https://www.blekitnypiotrus.pl/bpiotrus/zeglarz-materialy/zeglarz-jachtowy/"},
+ {t:"Węzły i cumowanie – podstawy (Wikipedia: Cumowanie)",u:"https://pl.wikipedia.org/wiki/Cumowanie"},
+ {t:"Strefa wiedzy – żeglarz jachtowy (Kliper, źródło pytań)",u:"https://kliper.net.pl/strefa-wiedzy-zeglarz-jachtowy/"}
+]
+};
+
+// ==== APLIKACJA ====
+let activeCat = "Przepisy";
+let testMode = false;
+let hideDone = false;
+let done = {};
+
+const catsEl = document.getElementById('cats');
+CATS.forEach(c=>{
+  const b=document.createElement('button');
+  b.className='cat'+(c===activeCat?' active':'')+(READY[c]?'':' soon');
+  b.textContent=c+(READY[c]?'':' • wkrótce');
+  if(READY[c]) b.onclick=()=>switchCat(c);
+  catsEl.appendChild(b);
+});
+
+async function switchCat(c){
+  activeCat=c; testMode=testMode; 
+  document.querySelectorAll('.cat').forEach(x=>x.classList.toggle('active', x.textContent.startsWith(c)&&READY[c]&&x.textContent.indexOf('wkrótce')<0));
+  done={}; try{ const r=await window.storage.get('done_'+c); if(r&&r.value) done=JSON.parse(r.value);}catch(e){}
+  render();
+}
+async function saveDone(){ try{ await window.storage.set('done_'+activeCat, JSON.stringify(done)); }catch(e){} }
+
+const listEl=document.getElementById('list');
+const countEl=document.getElementById('count');
+const qInput=document.getElementById('q');
+
+function render(){
+  const term=qInput.value.trim().toLowerCase();
+  const rows=(DATA[activeCat]||[]);
+  listEl.innerHTML='';
+  const src=SOURCES[activeCat];
+  if(src){ const sp=document.createElement('div'); sp.className='sources';
+    sp.innerHTML='<b>📚 Materiały źródłowe</b>'+src.map(s=>'<a href="'+s.u+'" target="_blank" rel="noopener">'+esc(s.t)+'</a>').join(''); listEl.appendChild(sp);}
+  let shown=0, doneCount=0;
+  rows.forEach(r=>{
+    const [n,q,a,note,img]=r;
+    if(done[n]) doneCount++;
+    if(hideDone && done[n]) return;
+    if(term && !(q.toLowerCase().includes(term)||a.toLowerCase().includes(term))) return;
+    shown++;
+    const card=document.createElement('div');
+    card.className='card'+(testMode?' hidden':'')+(done[n]?' done':'');
+    const imgUrl = IMG[activeCat] && IMG[activeCat][n];
+    card.innerHTML=
+      '<div class="qhead"><div class="num">'+n+'</div><div class="qtext">'+esc(q)+
+      (img&&!imgUrl?'<span class="img">📷 rysunek</span>':'')+'</div></div>'+
+      (imgUrl?'<div class="figure"><img loading="lazy" src="'+imgUrl+'" alt="ilustracja do pytania"><span class="figcap">ilustracja źródłowa — Kliper</span></div>':'')+
+      '<div class="ans"><b>Odpowiedź:</b> '+esc(a)+'</div>'+
+      '<div class="hook">💡 '+esc(note)+'</div>'+
+      '<label class="mark"><input type="checkbox" '+(done[n]?'checked':'')+'> opanowane</label>';
+    card.querySelector('input').onchange=e=>{ done[n]=e.target.checked; if(!done[n])delete done[n]; saveDone(); if(hideDone)render(); else{card.classList.toggle('done',e.target.checked); countEl.textContent=stat();} };
+    if(testMode){
+      card.querySelectorAll('.ans,.hook').forEach(el=>{ el.onclick=()=>el.classList.add('reveal'); });
+    }
+    listEl.appendChild(card);
+  });
+  countEl.textContent=stat(shown);
+  function stat(s){ return (s!==undefined?s+' / ':'')+rows.length+' pytań • opanowane: '+doneCount; }
+}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+qInput.oninput=render;
+document.getElementById('testBtn').onclick=e=>{ testMode=!testMode; e.target.classList.toggle('on',testMode); e.target.textContent=testMode?'👁 Pokaż odpowiedzi':'🙈 Tryb sprawdzania'; render(); };
+document.getElementById('hideDone').onclick=e=>{ hideDone=!hideDone; e.target.classList.toggle('on',hideDone); render(); };
+
+(async function init(){
+  try{ const r = await window.storage.get('done_'+activeCat); if(r&&r.value) done = JSON.parse(r.value); }catch(e){}
+  render();
+})();
+</script>
+</body>
+</html>
